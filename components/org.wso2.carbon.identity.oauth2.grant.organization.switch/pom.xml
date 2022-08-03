@@ -28,7 +28,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>org.wso2.carbon.identity.oauth2.grant.organization.switch</artifactId>
-    <name>WSO2 -  Organization Switch Grant Type</name>
+    <name>WSO2 - Organization Switch Grant Type</name>
     <packaging>bundle</packaging>
 
     <dependencies>
