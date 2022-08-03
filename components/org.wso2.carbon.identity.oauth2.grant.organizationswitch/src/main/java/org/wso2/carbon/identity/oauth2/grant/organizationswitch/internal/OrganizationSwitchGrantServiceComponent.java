@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.organization.management.oauth2.grant.internal;
+package org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,12 +30,12 @@ import org.wso2.carbon.user.core.service.RealmService;
  * This class contains the service component of the organization switching grant type.
  */
 @Component(
-        name = "identity.organization.management.oauth2.grant.component",
+        name = "identity.oauth2.grant.organizationswitch.component",
         immediate = true
 )
-public class OrganizationSwitchGrantDataHolderServiceComponent {
+public class OrganizationSwitchGrantServiceComponent {
 
-    private static final Log log = LogFactory.getLog(OrganizationSwitchGrantDataHolderServiceComponent.class);
+    private static final Log log = LogFactory.getLog(OrganizationSwitchGrantServiceComponent.class);
 
     @Reference(
             name = "realm.service",

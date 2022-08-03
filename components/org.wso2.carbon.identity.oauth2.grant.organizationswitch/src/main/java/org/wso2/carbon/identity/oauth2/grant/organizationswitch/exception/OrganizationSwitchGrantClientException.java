@@ -16,20 +16,16 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.organization.management.oauth2.grant.exception;
+package org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception;
 
 /**
- * This exception class is to represent server side errors in the requests.
+ * This exception class is to represent client side errors in the requests.
  */
-public class OrganizationSwitchGrantServerException extends OrganizationSwitchGrantException {
+public class OrganizationSwitchGrantClientException extends OrganizationSwitchGrantException {
 
-    public OrganizationSwitchGrantServerException(String message, String errorCode, Throwable e) {
+    public OrganizationSwitchGrantClientException(String message, String description, String errorCode) {
 
-        super(message, errorCode, e);
+        super(message, description, errorCode);
     }
 
-    public OrganizationSwitchGrantServerException(String message, String description, String errorCode, Throwable e) {
-
-        super(message, description, errorCode, e);
-    }
 }

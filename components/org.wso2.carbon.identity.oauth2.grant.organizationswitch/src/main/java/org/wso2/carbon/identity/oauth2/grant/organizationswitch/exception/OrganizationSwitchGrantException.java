@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.organization.management.oauth2.grant.exception;
+package org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 

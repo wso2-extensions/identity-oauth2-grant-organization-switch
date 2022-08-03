@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.organization.management.oauth2.grant.internal;
+package org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal;
 
 import org.wso2.carbon.user.core.service.RealmService;
 

@@ -16,11 +16,11 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.organization.management.oauth2.grant.util;
+package org.wso2.carbon.identity.oauth2.grant.organizationswitch.util;
 
 import org.apache.commons.lang.ArrayUtils;
-import org.wso2.carbon.identity.organization.management.oauth2.grant.exception.OrganizationSwitchGrantClientException;
-import org.wso2.carbon.identity.organization.management.oauth2.grant.exception.OrganizationSwitchGrantServerException;
+import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantClientException;
+import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantServerException;
 import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 
 /**
@@ -29,7 +29,7 @@ import org.wso2.carbon.identity.organization.management.service.constant.Organiz
 public class OrganizationSwitchGrantUtil {
 
     public static OrganizationSwitchGrantClientException handleClientException(
-            OrganizationManagementConstants.ErrorMessages error, String...  data) {
+            OrganizationManagementConstants.ErrorMessages error, String... data) {
 
         String description = error.getDescription();
         if (ArrayUtils.isNotEmpty(data)) {
@@ -39,13 +39,13 @@ public class OrganizationSwitchGrantUtil {
     }
 
     public static OrganizationSwitchGrantServerException handleServerException(
-            OrganizationManagementConstants.ErrorMessages error, Throwable  e) {
+            OrganizationManagementConstants.ErrorMessages error, Throwable e) {
 
         return new OrganizationSwitchGrantServerException(error.getMessage(), error.getCode(), e);
     }
 
     public static OrganizationSwitchGrantServerException handleServerException(
-            OrganizationManagementConstants.ErrorMessages error, Throwable  e, String... data) {
+            OrganizationManagementConstants.ErrorMessages error, Throwable e, String... data) {
 
         String description = error.getDescription();
         if (ArrayUtils.isNotEmpty(data)) {

@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.organization.management.oauth2.grant.util;
+package org.wso2.carbon.identity.oauth2.grant.organizationswitch.util;
 
 /**
  Organization switch grant constants.

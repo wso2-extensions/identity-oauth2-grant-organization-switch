@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.organization.management.oauth2.grant;
+package org.wso2.carbon.identity.oauth2.grant.organizationswitch;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -31,14 +31,15 @@ import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantException;
+import org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal.OrganizationSwitchGrantDataHolder;
+import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants;
+import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantUtil;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.organization.management.authz.service.OrganizationManagementAuthorizationManager;
 import org.wso2.carbon.identity.organization.management.authz.service.exception.OrganizationManagementAuthzServiceServerException;
-import org.wso2.carbon.identity.organization.management.oauth2.grant.exception.OrganizationSwitchGrantException;
-import org.wso2.carbon.identity.organization.management.oauth2.grant.internal.OrganizationSwitchGrantDataHolder;
-import org.wso2.carbon.identity.organization.management.oauth2.grant.util.OrganizationSwitchGrantConstants;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManagerImpl;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -49,9 +50,6 @@ import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.Arrays;
 
-import static org.wso2.carbon.identity.organization.management.oauth2.grant.util.OrganizationSwitchGrantConstants.ORG_SWITCH_PERMISSION;
-import static org.wso2.carbon.identity.organization.management.oauth2.grant.util.OrganizationSwitchGrantConstants.ORG_SWITCH_PERMISSION_FOR_ROOT;
-import static org.wso2.carbon.identity.organization.management.oauth2.grant.util.OrganizationSwitchGrantUtil.handleServerException;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_VALIDATING_USER_ASSOCIATION;
@@ -62,14 +60,13 @@ import static org.wso2.carbon.identity.organization.management.service.util.Util
 /**
  * Implements the AuthorizationGrantHandler for the OrganizationSwitch grant type.
  */
-public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler  {
-
-    public OrganizationManager organizationManager = new OrganizationManagerImpl();
+public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
+    public OrganizationManager organizationManager = new OrganizationManagerImpl();
 
     @Override
-    public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)  throws IdentityOAuth2Exception {
+    public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
         super.validateGrant(tokReqMsgCtx);
 
@@ -133,9 +130,9 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler  
 
         try {
             return OrganizationManagementAuthorizationManager.getInstance()
-                    .isUserAuthorized(userId, ORG_SWITCH_PERMISSION, orgId);
+                    .isUserAuthorized(userId, OrganizationSwitchGrantConstants.ORG_SWITCH_PERMISSION, orgId);
         } catch (OrganizationManagementAuthzServiceServerException e) {
-           throw handleServerException(ERROR_CODE_ERROR_VALIDATING_USER_ASSOCIATION, e);
+            throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ERROR_VALIDATING_USER_ASSOCIATION, e);
         }
     }
 
@@ -189,7 +186,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler  
         try {
             return new AuthenticatedUser(authorizedUser).getUserId();
         } catch (UserIdNotFoundException e) {
-            throw handleServerException(ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER, e);
+            throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER, e);
         }
     }
 
@@ -198,7 +195,8 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler  
         try {
             return organizationManager.resolveTenantDomain(organizationId);
         } catch (OrganizationManagementException e) {
-            throw handleServerException(ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN, e);
+            throw OrganizationSwitchGrantUtil.handleServerException(
+                    ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN, e);
         }
     }
 
@@ -208,10 +206,12 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler  
             RealmService realmService = OrganizationSwitchGrantDataHolder.getInstance().getRealmService();
             UserRealm tenantUserRealm = realmService.getTenantUserRealm(getTenantId());
             AuthorizationManager authorizationManager = tenantUserRealm.getAuthorizationManager();
-            return authorizationManager.isUserAuthorized(username, ORG_SWITCH_PERMISSION_FOR_ROOT,
+            return authorizationManager.isUserAuthorized(username,
+                    OrganizationSwitchGrantConstants.ORG_SWITCH_PERMISSION_FOR_ROOT,
                     CarbonConstants.UI_PERMISSION_ACTION);
         } catch (UserStoreException e) {
-            throw handleServerException(ERROR_CODE_ERROR_VALIDATING_USER_ROOT_ASSOCIATION, e);
+            throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ERROR_VALIDATING_USER_ROOT_ASSOCIATION,
+                    e);
         }
     }
 }

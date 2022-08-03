@@ -16,15 +16,21 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.organization.management.oauth2.grant.exception;
+package org.wso2.carbon.identity.oauth2.grant.organizationswitch;
+
+import org.apache.oltu.oauth2.common.validators.AbstractValidator;
+import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
- * This exception class is to represent client side errors in the requests.
+ * This validates the organization switch grant request.
  */
-public class OrganizationSwitchGrantClientException extends OrganizationSwitchGrantException {
+public class OrganizationSwitchGrantValidator extends AbstractValidator<HttpServletRequest> {
 
-    public OrganizationSwitchGrantClientException(String message, String description, String errorCode) {
-        super(message, description, errorCode);
+    public OrganizationSwitchGrantValidator() {
+
+        requiredParams.add(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM);
+        requiredParams.add(OrganizationSwitchGrantConstants.Params.ORG_PARAM);
     }
-
 }
