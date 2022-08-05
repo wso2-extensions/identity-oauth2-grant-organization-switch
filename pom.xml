@@ -205,7 +205,7 @@
         <carbon.kernel.package.import.version.range>[4.7.0, 5.0.0)</carbon.kernel.package.import.version.range>
         <carbon.user.api.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.user.api.imp.pkg.version.range>
 
-        <carbon.identity.org.mgt.version>1.0.62</carbon.identity.org.mgt.version>
+        <carbon.identity.org.mgt.version>1.0.80</carbon.identity.org.mgt.version>
         <org.wso2.identity.organization.mgt.imp.pkg.version.range>[1.0.0,2.0.0)
         </org.wso2.identity.organization.mgt.imp.pkg.version.range>
 
