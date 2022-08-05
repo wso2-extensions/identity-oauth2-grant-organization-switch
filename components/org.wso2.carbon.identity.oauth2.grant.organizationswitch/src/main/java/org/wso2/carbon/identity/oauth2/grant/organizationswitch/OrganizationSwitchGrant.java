@@ -53,8 +53,8 @@ import java.util.Arrays;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_VALIDATING_USER_ASSOCIATION;
-import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_VALIDATING_USER_ROOT_ASSOCIATION;
-import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ROOT_ORG_ID;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_VALIDATING_USER_SUPER_ASSOCIATION;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.SUPER_ORG_ID;
 import static org.wso2.carbon.identity.organization.management.service.util.Utils.getTenantId;
 
 /**
@@ -91,8 +91,8 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         String userId = getUserIdFromAuthorizedUser(authorizedUser);
 
         boolean isValidCollaborator;
-        if (StringUtils.equals(ROOT_ORG_ID, organizationId)) {
-            isValidCollaborator = validateCollaboratorAssociationForRoot(authorizedUser.getUserName());
+        if (StringUtils.equals(SUPER_ORG_ID, organizationId)) {
+            isValidCollaborator = validateCollaboratorAssociationForSuper(authorizedUser.getUserName());
         } else {
             isValidCollaborator = validateCollaboratorAssociation(userId, organizationId);
         }
@@ -200,17 +200,17 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         }
     }
 
-    private boolean validateCollaboratorAssociationForRoot(String username) throws OrganizationSwitchGrantException {
+    private boolean validateCollaboratorAssociationForSuper(String username) throws OrganizationSwitchGrantException {
 
         try {
             RealmService realmService = OrganizationSwitchGrantDataHolder.getInstance().getRealmService();
             UserRealm tenantUserRealm = realmService.getTenantUserRealm(getTenantId());
             AuthorizationManager authorizationManager = tenantUserRealm.getAuthorizationManager();
             return authorizationManager.isUserAuthorized(username,
-                    OrganizationSwitchGrantConstants.ORG_SWITCH_PERMISSION_FOR_ROOT,
+                    OrganizationSwitchGrantConstants.ORG_SWITCH_PERMISSION_FOR_SUPER,
                     CarbonConstants.UI_PERMISSION_ACTION);
         } catch (UserStoreException e) {
-            throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ERROR_VALIDATING_USER_ROOT_ASSOCIATION,
+            throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ERROR_VALIDATING_USER_SUPER_ASSOCIATION,
                     e);
         }
     }
