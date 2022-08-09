@@ -35,9 +35,11 @@ import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.Organi
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal.OrganizationSwitchGrantDataHolder;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantUtil;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.authz.service.OrganizationManagementAuthorizationManager;
 import org.wso2.carbon.identity.organization.management.authz.service.exception.OrganizationManagementAuthzServiceServerException;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
@@ -50,6 +52,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.Arrays;
 
+import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_VALIDATING_USER_ASSOCIATION;
@@ -88,7 +91,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         }
 
         User authorizedUser = User.getUserFromUserName(validationResponseDTO.getAuthorizedUser());
-        String userId = getUserIdFromAuthorizedUser(authorizedUser);
+
+        AccessTokenDO tokenDO = OAuth2Util.findAccessToken(token, false);
+
+        String userId;
+        if (nonNull(tokenDO) && tokenDO.getAuthzUser().isFederatedUser()) {
+            userId = tokenDO.getAuthzUser().getUserName();
+        } else {
+            userId = getUserIdFromAuthorizedUser(authorizedUser);
+        }
 
         boolean isValidCollaborator;
         if (StringUtils.equals(SUPER_ORG_ID, organizationId)) {
