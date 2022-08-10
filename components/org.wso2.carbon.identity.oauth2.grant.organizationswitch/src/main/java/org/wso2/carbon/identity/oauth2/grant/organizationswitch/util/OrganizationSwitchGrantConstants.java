@@ -25,6 +25,7 @@ public class OrganizationSwitchGrantConstants {
 
     public static final String ORG_SWITCH_PERMISSION = "/permission/admin/manage/identity/organizationmgt/view";
     public static final String ORG_SWITCH_PERMISSION_FOR_SUPER = "/permission/admin";
+    public static final String ORGANIZATION_AUTHENTICATOR = "OrganizationAuthenticator";
 
     /**
      * Constants related to request parameters.

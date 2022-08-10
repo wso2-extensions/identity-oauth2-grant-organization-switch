@@ -25,6 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -35,9 +37,11 @@ import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.Organi
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal.OrganizationSwitchGrantDataHolder;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantUtil;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.authz.service.OrganizationManagementAuthorizationManager;
 import org.wso2.carbon.identity.organization.management.authz.service.exception.OrganizationManagementAuthzServiceServerException;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
@@ -50,6 +54,11 @@ import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.Arrays;
 
+import static java.util.Objects.nonNull;
+import static java.util.Optional.ofNullable;
+import static org.apache.commons.lang.StringUtils.equalsIgnoreCase;
+import static org.apache.commons.lang.StringUtils.isBlank;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ORGANIZATION_AUTHENTICATOR;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_VALIDATING_USER_ASSOCIATION;
@@ -63,6 +72,7 @@ import static org.wso2.carbon.identity.organization.management.service.util.Util
 public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
+
     public OrganizationManager organizationManager = new OrganizationManagerImpl();
 
     @Override
@@ -87,8 +97,28 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             LOG.debug("Access token validation success.");
         }
 
-        User authorizedUser = User.getUserFromUserName(validationResponseDTO.getAuthorizedUser());
-        String userId = getUserIdFromAuthorizedUser(authorizedUser);
+        AccessTokenDO tokenDO = OAuth2Util.findAccessToken(token, false);
+        AuthenticatedUser authorizedUser = nonNull(tokenDO) ? tokenDO.getAuthzUser() :
+                AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
+                        validationResponseDTO.getAuthorizedUser());
+
+        String userId = null;
+        if (authorizedUser.isFederatedUser()) {
+            IdentityProvider idp = OAuth2Util.getIdentityProvider(authorizedUser.getFederatedIdPName(),
+                    authorizedUser.getTenantDomain());
+            if (equalsIgnoreCase(ORGANIZATION_AUTHENTICATOR,
+                    ofNullable(idp.getDefaultAuthenticatorConfig()).map(FederatedAuthenticatorConfig::getName)
+                            .orElse(null))) {
+                // If the user bound to the token is a federated user and the user is authenticated via
+                // OrganizationLogin Authenticator accessing the organization_switch grant, the user ID is populated
+                // as the username.
+                userId = authorizedUser.getUserName();
+            }
+        }
+
+        if (isBlank(userId)) {
+            userId = getUserIdFromAuthorizedUser(authorizedUser);
+        }
 
         boolean isValidCollaborator;
         if (StringUtils.equals(SUPER_ORG_ID, organizationId)) {
