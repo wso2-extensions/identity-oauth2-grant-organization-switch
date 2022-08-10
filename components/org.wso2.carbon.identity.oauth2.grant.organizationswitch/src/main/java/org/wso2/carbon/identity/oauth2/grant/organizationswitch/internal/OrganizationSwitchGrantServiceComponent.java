@@ -18,13 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
-import org.wso2.carbon.user.core.service.RealmService;
 
 /**
  * This class contains the service component of the organization switching grant type.
@@ -34,28 +28,5 @@ import org.wso2.carbon.user.core.service.RealmService;
         immediate = true
 )
 public class OrganizationSwitchGrantServiceComponent {
-
-    private static final Log log = LogFactory.getLog(OrganizationSwitchGrantServiceComponent.class);
-
-    @Reference(
-            name = "realm.service",
-            service = RealmService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetRealmService")
-    protected void setRealmService(RealmService realmService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Setting the Realm Service");
-        }
-        OrganizationSwitchGrantDataHolder.getInstance().setRealmService(realmService);
-    }
-
-    protected void unsetRealmService(RealmService realmService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Unset the Realm Service.");
-        }
-        OrganizationSwitchGrantDataHolder.getInstance().setRealmService(null);
-    }
+    
 }
