@@ -75,11 +75,6 @@
                 <version>${carbon.identity.org.mgt.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wso2.carbon.identity.organization.management</groupId>
-                <artifactId>org.wso2.carbon.identity.organization.management.authz.service</artifactId>
-                <version>${carbon.identity.org.mgt.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.apache.oltu.oauth2</groupId>
                 <artifactId>org.apache.oltu.oauth2.client</artifactId>
                 <version>${oltu.oauth2.client.version}</version>

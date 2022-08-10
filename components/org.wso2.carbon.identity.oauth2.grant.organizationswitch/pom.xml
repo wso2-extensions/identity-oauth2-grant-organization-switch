@@ -54,10 +54,6 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.organization.management</groupId>
-            <artifactId>org.wso2.carbon.identity.organization.management.authz.service</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.identity.organization.management</groupId>
             <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
         </dependency>
     </dependencies>
@@ -94,8 +90,6 @@
                             org.wso2.carbon.identity.oauth2.token; version="${identity.inbound.auth.oauth.version}",
                             org.wso2.carbon.identity.oauth2.token.handlers.grant; version="${identity.inbound.auth.oauth.version}",
                             org.wso2.carbon.identity.oauth2.util; version="${identity.inbound.auth.oauth.version}",
-                            org.wso2.carbon.identity.organization.management.authz.service; version="${org.wso2.identity.organization.mgt.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.organization.management.authz.service.exception; version="${org.wso2.identity.organization.mgt.imp.pkg.version.range}",
                             org.wso2.carbon.identity.organization.management.service; version="${org.wso2.identity.organization.mgt.imp.pkg.version.range}",
                             org.wso2.carbon.identity.organization.management.service.constant; version="${org.wso2.identity.organization.mgt.imp.pkg.version.range}",
                             org.wso2.carbon.identity.organization.management.service.exception; version="${org.wso2.identity.organization.mgt.imp.pkg.version.range}",
