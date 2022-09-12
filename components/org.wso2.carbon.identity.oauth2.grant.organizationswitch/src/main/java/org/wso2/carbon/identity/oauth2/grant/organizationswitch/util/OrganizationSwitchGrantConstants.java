@@ -32,5 +32,6 @@ public class OrganizationSwitchGrantConstants {
 
         public static final String TOKEN_PARAM = "token";
         public static final String ORG_PARAM = "switching_organization";
+        public static final String ORGANIZATION_USER_ATTRIBUTE = "org";
     }
 }

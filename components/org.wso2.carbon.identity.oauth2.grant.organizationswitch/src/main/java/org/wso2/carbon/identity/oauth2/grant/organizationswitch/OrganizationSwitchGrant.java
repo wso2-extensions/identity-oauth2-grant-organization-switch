@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.User;
@@ -50,6 +51,7 @@ import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang.StringUtils.equalsIgnoreCase;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ORGANIZATION_AUTHENTICATOR;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.Params.ORGANIZATION_USER_ATTRIBUTE;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER;
 
@@ -112,7 +114,8 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         authenticatedUser.setUserStoreDomain(authorizedUser.getUserStoreDomain());
         authenticatedUser.setTenantDomain(getTenantDomainFromOrganizationId(organizationId));
         authenticatedUser.setUserId(userId);
-
+        authenticatedUser.getUserAttributes().put(ClaimMapping.build(ORGANIZATION_USER_ATTRIBUTE,
+                        ORGANIZATION_USER_ATTRIBUTE, null, false), organizationId);
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
