@@ -18,7 +18,13 @@
 
 package org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 
 /**
  * This class contains the service component of the organization switching grant type.
@@ -28,5 +34,24 @@ import org.osgi.service.component.annotations.Component;
         immediate = true
 )
 public class OrganizationSwitchGrantServiceComponent {
-    
+
+    private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrantServiceComponent.class);
+
+    @Reference(name = "identity.organization.management.user.resident.resolver.service.component",
+            service = OrganizationUserResidentResolverService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationUserResidentResolverService")
+    protected void setOrganizationUserResidentResolverService(OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        LOG.debug("Organization user resident resolver service is set.");
+        OrganizationSwitchGrantDataHolder.getInstance()
+                .setOrganizationUserResidentResolverService(organizationUserResidentResolverService);
+    }
+
+    protected void unsetOrganizationUserResidentResolverService(OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        LOG.debug("Organization user resident resolver service is unset.");
+        OrganizationSwitchGrantDataHolder.getInstance().setOrganizationUserResidentResolverService(null);
+    }
 }
