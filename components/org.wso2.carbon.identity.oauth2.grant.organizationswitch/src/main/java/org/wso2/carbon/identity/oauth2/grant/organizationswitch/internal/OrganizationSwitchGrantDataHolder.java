@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal;
 
+
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 
 /**

@@ -49,7 +49,8 @@ public class OrganizationSwitchGrantServiceComponent {
                 .setOrganizationUserResidentResolverService(organizationUserResidentResolverService);
     }
 
-    protected void unsetOrganizationUserResidentResolverService(OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+    protected void unsetOrganizationUserResidentResolverService(
+            OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         LOG.debug("Organization user resident resolver service is unset.");
         OrganizationSwitchGrantDataHolder.getInstance().setOrganizationUserResidentResolverService(null);
