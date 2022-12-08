@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.grant.organizationswitch;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -50,11 +51,10 @@ import java.util.Optional;
 
 import static java.util.Objects.nonNull;
 import static java.util.Optional.ofNullable;
-import static org.apache.commons.lang.StringUtils.equalsIgnoreCase;
-import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ORGANIZATION_AUTHENTICATOR;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_TENANT_DOMAIN_NOT_FOUND_FOR_ORGANIZATION_ID;
 import static org.wso2.carbon.user.core.UserCoreConstants.TENANT_DOMAIN_COMBINER;
 
 /**
@@ -98,7 +98,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         if (authorizedUser.isFederatedUser()) {
             IdentityProvider idp = OAuth2Util.getIdentityProvider(authorizedUser.getFederatedIdPName(),
                     authorizedUser.getTenantDomain());
-            if (equalsIgnoreCase(ORGANIZATION_AUTHENTICATOR,
+            if (StringUtils.equalsIgnoreCase(ORGANIZATION_AUTHENTICATOR,
                     ofNullable(idp.getDefaultAuthenticatorConfig()).map(FederatedAuthenticatorConfig::getName)
                             .orElse(null))) {
                 // If the user bound to the token is a federated user and the user is authenticated via
@@ -117,7 +117,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             }
         }
 
-        if (isBlank(userId)) {
+        if (StringUtils.isBlank(userId)) {
             userId = getUserIdFromAuthorizedUser(authorizedUser);
         }
 
@@ -193,7 +193,12 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private String getTenantDomainFromOrganizationId(String organizationId) throws OrganizationSwitchGrantException {
 
         try {
-            return organizationManager.resolveTenantDomain(organizationId);
+            String tenantDomain = organizationManager.resolveTenantDomain(organizationId);
+            if (StringUtils.isBlank(tenantDomain)) {
+                throw OrganizationSwitchGrantUtil.handleClientException(
+                        ERROR_CODE_TENANT_DOMAIN_NOT_FOUND_FOR_ORGANIZATION_ID, organizationId);
+            }
+            return tenantDomain;
         } catch (OrganizationManagementException e) {
             throw OrganizationSwitchGrantUtil.handleServerException(
                     ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN, e);
