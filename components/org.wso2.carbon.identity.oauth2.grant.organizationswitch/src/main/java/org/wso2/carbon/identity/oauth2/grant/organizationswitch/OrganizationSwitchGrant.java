@@ -21,16 +21,23 @@ package org.wso2.carbon.identity.oauth2.grant.organizationswitch;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantException;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantServerException;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal.OrganizationSwitchGrantDataHolder;
@@ -65,6 +72,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
 
     public OrganizationManager organizationManager = new OrganizationManagerImpl();
+    private AccessTokenDO tokenDO;
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -84,11 +92,10 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
         LOG.debug("Access token validation success.");
 
-        AccessTokenDO tokenDO = OAuth2Util.findAccessToken(token, false);
+        this.tokenDO = OAuth2Util.findAccessToken(token, false);
         AuthenticatedUser authorizedUser = nonNull(tokenDO) ? tokenDO.getAuthzUser() :
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
-
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(authorizedUser.getUserName());
         authenticatedUser.setUserStoreDomain(authorizedUser.getUserStoreDomain());
@@ -134,6 +141,14 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         }
 
         return true;
+    }
+
+    @Override
+    public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
+        tokReqMsgCtx.setTokenBinding(tokenDO.getTokenBinding());
+        revokeExistingToken(tokenDO.getConsumerKey(), tokenDO.getAccessToken());
+        return super.issue(tokReqMsgCtx);
     }
 
     private String extractParameter(String param, OAuthTokenReqMessageContext tokReqMsgCtx) {
@@ -212,4 +227,56 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         }
     }
 
+    /**
+     * Builds the revocation request and calls the revoke oauth service.
+     *
+     * @param clientId client id.
+     * @param accessToken access token.
+     */
+    private static void revokeExistingToken(String clientId, String accessToken) throws IdentityOAuth2Exception {
+
+        // This is used to avoid client validation failure in revokeTokenByOAuthClient.
+        // This will not affect the flow negatively as the client is already authenticated by this point.
+        OAuthClientAuthnContext oAuthClientAuthnContext =
+                buildAuthenticatedOAuthClientAuthnContext(clientId);
+
+        OAuthRevocationRequestDTO revocationRequestDTO =
+                OAuth2Util.buildOAuthRevocationRequest(oAuthClientAuthnContext, accessToken);
+
+        OAuthRevocationResponseDTO revocationResponseDTO =
+                getOauth2Service().revokeTokenByOAuthClient(revocationRequestDTO);
+
+        if (revocationResponseDTO.isError()) {
+            String msg = "Error while revoking tokens for clientId:" + clientId +
+                    " Error Message:" + revocationResponseDTO.getErrorMsg();
+            if (revocationResponseDTO.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
+                LOG.error(msg);
+            }
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg);
+            }
+            throw new IdentityOAuth2Exception(msg);
+        }
+    }
+
+    /**
+     * This method is used to avoid client validation failure in OAuth2Service.revokeTokenByOAuthClient.
+     *
+     * @param clientId client id of the application.
+     * @return Returns a OAuthClientAuthnContext with isAuthenticated set to true.
+     */
+    private static OAuthClientAuthnContext buildAuthenticatedOAuthClientAuthnContext(String clientId) {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(clientId);
+
+        return oAuthClientAuthnContext;
+    }
+
+    private static OAuth2Service getOauth2Service() {
+
+        return (OAuth2Service) PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiService(OAuth2Service.class, null);
+    }
 }
