@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.Organizatio
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
@@ -72,7 +73,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
 
     public OrganizationManager organizationManager = new OrganizationManagerImpl();
-    private AccessTokenDO tokenDO;
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -92,7 +92,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
         LOG.debug("Access token validation success.");
 
-        this.tokenDO = OAuth2Util.findAccessToken(token, false);
+        AccessTokenDO tokenDO = OAuth2Util.findAccessToken(token, false);
         AuthenticatedUser authorizedUser = nonNull(tokenDO) ? tokenDO.getAuthzUser() :
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
@@ -134,6 +134,8 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
         tokReqMsgCtx.setScope(allowedScopes);
+        tokReqMsgCtx.addProperty("tokenBindingReference", tokenDO.getTokenBinding());
+        tokReqMsgCtx.addProperty("authz_code_token", tokenDO.getAccessToken());
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Issuing an access token for user: " + authenticatedUser + " with scopes: " +
@@ -146,8 +148,10 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        tokReqMsgCtx.setTokenBinding(tokenDO.getTokenBinding());
-        revokeExistingToken(tokenDO.getConsumerKey(), tokenDO.getAccessToken());
+        TokenBinding tokenBindingRef = (TokenBinding) tokReqMsgCtx.getProperty("tokenBindingReference");
+        String authzCodeToken = tokReqMsgCtx.getProperty("authz_code_token").toString();
+        tokReqMsgCtx.setTokenBinding(tokenBindingRef);
+        revokeExistingToken(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), authzCodeToken);
         return super.issue(tokReqMsgCtx);
     }
 
