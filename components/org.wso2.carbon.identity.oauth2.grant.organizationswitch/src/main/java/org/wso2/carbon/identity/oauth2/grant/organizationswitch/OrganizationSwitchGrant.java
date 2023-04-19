@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -46,13 +47,15 @@ import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.Organizatio
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManagerImpl;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -134,8 +137,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
         tokReqMsgCtx.setScope(allowedScopes);
-        tokReqMsgCtx.addProperty("tokenBindingReference", tokenDO.getTokenBinding());
-        tokReqMsgCtx.addProperty("authz_code_token", tokenDO.getAccessToken());
+        tokReqMsgCtx.addProperty("tokenBindingReference", tokenDO.getTokenBinding().getBindingReference());
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Issuing an access token for user: " + authenticatedUser + " with scopes: " +
@@ -148,11 +150,11 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        TokenBinding tokenBindingRef = (TokenBinding) tokReqMsgCtx.getProperty("tokenBindingReference");
-        String authzCodeToken = tokReqMsgCtx.getProperty("authz_code_token").toString();
-        tokReqMsgCtx.setTokenBinding(tokenBindingRef);
-        revokeExistingToken(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), authzCodeToken);
-        return super.issue(tokReqMsgCtx);
+        String tokenBindingRef = "org_switch_" + tokReqMsgCtx.getProperty("tokenBindingReference");
+        OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = super.issue(tokReqMsgCtx);
+        // Update the token binding reference with the new token id.
+        updateTokenBindingRef(oAuth2AccessTokenRespDTO.getTokenId(), tokenBindingRef);
+        return oAuth2AccessTokenRespDTO;
     }
 
     private String extractParameter(String param, OAuthTokenReqMessageContext tokReqMsgCtx) {
@@ -232,55 +234,31 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     * Builds the revocation request and calls the revoke oauth service.
+     * Update the token binding reference with the new token id.
      *
-     * @param clientId client id.
-     * @param accessToken access token.
+     * @param tokenId Token id.
+     * @param tokenBindingRef Token binding reference.
+     * @throws IdentityOAuth2Exception If an error occurs while updating the token binding reference.
      */
-    private static void revokeExistingToken(String clientId, String accessToken) throws IdentityOAuth2Exception {
+    private void updateTokenBindingRef(String tokenId, String tokenBindingRef)
+            throws IdentityOAuth2Exception {
 
-        // This is used to avoid client validation failure in revokeTokenByOAuthClient.
-        // This will not affect the flow negatively as the client is already authenticated by this point.
-        OAuthClientAuthnContext oAuthClientAuthnContext =
-                buildAuthenticatedOAuthClientAuthnContext(clientId);
-
-        OAuthRevocationRequestDTO revocationRequestDTO =
-                OAuth2Util.buildOAuthRevocationRequest(oAuthClientAuthnContext, accessToken);
-
-        OAuthRevocationResponseDTO revocationResponseDTO =
-                getOauth2Service().revokeTokenByOAuthClient(revocationRequestDTO);
-
-        if (revocationResponseDTO.isError()) {
-            String msg = "Error while revoking tokens for clientId:" + clientId +
-                    " Error Message:" + revocationResponseDTO.getErrorMsg();
-            if (revocationResponseDTO.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
-                LOG.error(msg);
-            }
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(msg);
-            }
-            throw new IdentityOAuth2Exception(msg);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Updating token binding reference for token id: " + tokenId);
         }
-    }
-
-    /**
-     * This method is used to avoid client validation failure in OAuth2Service.revokeTokenByOAuthClient.
-     *
-     * @param clientId client id of the application.
-     * @return Returns a OAuthClientAuthnContext with isAuthenticated set to true.
-     */
-    private static OAuthClientAuthnContext buildAuthenticatedOAuthClientAuthnContext(String clientId) {
-
-        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
-        oAuthClientAuthnContext.setAuthenticated(true);
-        oAuthClientAuthnContext.setClientId(clientId);
-
-        return oAuthClientAuthnContext;
-    }
-
-    private static OAuth2Service getOauth2Service() {
-
-        return (OAuth2Service) PrivilegedCarbonContext
-                .getThreadLocalCarbonContext().getOSGiService(OAuth2Service.class, null);
+        String sql = "UPDATE IDN_OAUTH2_ACCESS_TOKEN SET TOKEN_BINDING_REF=? WHERE TOKEN_ID=?";
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                prepStmt.setString(1, tokenBindingRef);
+                prepStmt.setString(2, tokenId);
+                prepStmt.executeUpdate();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error while updating the access token.", e);
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error while updating Access Token with ID: " + tokenId, e);
+        }
     }
 }
