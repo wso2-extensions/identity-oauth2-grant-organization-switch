@@ -150,7 +150,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        String tokenBindingRef = "org_switch_" + tokReqMsgCtx.getProperty("tokenBindingReference");
+        String tokenBindingRef = "os_" + tokReqMsgCtx.getProperty("tokenBindingReference");
         OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = super.issue(tokReqMsgCtx);
         // Update the token binding reference with the new token id.
         updateTokenBindingRef(oAuth2AccessTokenRespDTO.getTokenId(), tokenBindingRef);
