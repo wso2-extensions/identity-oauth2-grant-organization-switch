@@ -137,7 +137,8 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
         tokReqMsgCtx.setScope(allowedScopes);
-        tokReqMsgCtx.addProperty("tokenBindingReference", tokenDO.getTokenBinding().getBindingReference());
+        tokReqMsgCtx.addProperty(OrganizationSwitchGrantConstants.TOKEN_BINDING_REFERENCE,
+                tokenDO.getTokenBinding().getBindingReference());
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Issuing an access token for user: " + authenticatedUser + " with scopes: " +
@@ -150,7 +151,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        String tokenBindingRef = "os_" + tokReqMsgCtx.getProperty("tokenBindingReference");
+        // In the Asgardeo console's token system, users are given two tokens upon login - an Authorization code token
+        // and an Organization Switch Grant token. The latter is generated using the former and is utilized to
+        // access resources. Upon logout, only the Authorization code token is revoked, leaving the
+        // Organization Switch Grant token active.  To address this, a prefix is added to the Authorization code token's
+        // binding reference, which is then used in the Organization Switch Grant token. Therefore, during logout,
+        // all tokens associated with the binding reference, including those with the prefix, are revoked,
+        // ensuring both tokens are effectively revoked.
+        String tokenBindingRef = "os_" + tokReqMsgCtx.getProperty(
+                OrganizationSwitchGrantConstants.TOKEN_BINDING_REFERENCE);
         OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = super.issue(tokReqMsgCtx);
         // Update the token binding reference with the new token id.
         updateTokenBindingRef(oAuth2AccessTokenRespDTO.getTokenId(), tokenBindingRef);
