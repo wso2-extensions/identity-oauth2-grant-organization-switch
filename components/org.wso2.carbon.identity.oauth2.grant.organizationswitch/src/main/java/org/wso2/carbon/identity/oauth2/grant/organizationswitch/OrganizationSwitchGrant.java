@@ -21,16 +21,24 @@ package org.wso2.carbon.identity.oauth2.grant.organizationswitch;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantException;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantServerException;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal.OrganizationSwitchGrantDataHolder;
@@ -45,6 +53,9 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.OrganizationManagerImpl;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -88,7 +99,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         AuthenticatedUser authorizedUser = nonNull(tokenDO) ? tokenDO.getAuthzUser() :
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
-
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(authorizedUser.getUserName());
         authenticatedUser.setUserStoreDomain(authorizedUser.getUserStoreDomain());
@@ -127,6 +137,8 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
         tokReqMsgCtx.setScope(allowedScopes);
+        tokReqMsgCtx.addProperty(OrganizationSwitchGrantConstants.TOKEN_BINDING_REFERENCE,
+                tokenDO.getTokenBinding().getBindingReference());
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Issuing an access token for user: " + authenticatedUser + " with scopes: " +
@@ -134,6 +146,24 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         }
 
         return true;
+    }
+
+    @Override
+    public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
+        // In the Asgardeo console's token system, users are given two tokens upon login - an Authorization code token
+        // and an Organization Switch Grant token. The latter is generated using the former and is utilized to
+        // access resources. Upon logout, only the Authorization code token is revoked, leaving the
+        // Organization Switch Grant token active.  To address this, a prefix is added to the Authorization code token's
+        // binding reference, which is then used in the Organization Switch Grant token. Therefore, during logout,
+        // all tokens associated with the binding reference, including those with the prefix, are revoked,
+        // ensuring both tokens are effectively revoked.
+        String tokenBindingRef = "os_" + tokReqMsgCtx.getProperty(
+                OrganizationSwitchGrantConstants.TOKEN_BINDING_REFERENCE);
+        OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = super.issue(tokReqMsgCtx);
+        // Update the token binding reference with the new token id.
+        updateTokenBindingRef(oAuth2AccessTokenRespDTO.getTokenId(), tokenBindingRef);
+        return oAuth2AccessTokenRespDTO;
     }
 
     private String extractParameter(String param, OAuthTokenReqMessageContext tokReqMsgCtx) {
@@ -212,4 +242,32 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         }
     }
 
+    /**
+     * Update the token binding reference with the new token id.
+     *
+     * @param tokenId Token id.
+     * @param tokenBindingRef Token binding reference.
+     * @throws IdentityOAuth2Exception If an error occurs while updating the token binding reference.
+     */
+    private void updateTokenBindingRef(String tokenId, String tokenBindingRef)
+            throws IdentityOAuth2Exception {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Updating token binding reference for token id: " + tokenId);
+        }
+        String sql = "UPDATE IDN_OAUTH2_ACCESS_TOKEN SET TOKEN_BINDING_REF=? WHERE TOKEN_ID=?";
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                prepStmt.setString(1, tokenBindingRef);
+                prepStmt.setString(2, tokenId);
+                prepStmt.executeUpdate();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error while updating the access token.", e);
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error while updating Access Token with ID: " + tokenId, e);
+        }
+    }
 }

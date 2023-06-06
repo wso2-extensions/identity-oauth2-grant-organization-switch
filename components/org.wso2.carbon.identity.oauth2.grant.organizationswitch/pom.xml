@@ -89,6 +89,7 @@
                             org.wso2.carbon.identity.oauth2.model; version="${identity.inbound.auth.oauth.version}",
                             org.wso2.carbon.identity.oauth2.token; version="${identity.inbound.auth.oauth.version}",
                             org.wso2.carbon.identity.oauth2.token.handlers.grant; version="${identity.inbound.auth.oauth.version}",
+                            org.wso2.carbon.identity.oauth2.token.bindings; version="${identity.inbound.auth.oauth.version}",
                             org.wso2.carbon.identity.oauth2.util; version="${identity.inbound.auth.oauth.version}",
                             org.wso2.carbon.identity.organization.management.service; version="${org.wso2.identity.organization.mgt.core.imp.pkg.version.range}",
                             org.wso2.carbon.identity.organization.management.service.constant; version="${org.wso2.identity.organization.mgt.core.imp.pkg.version.range}",

@@ -25,6 +25,8 @@ public class OrganizationSwitchGrantConstants {
 
     public static final String ORGANIZATION_AUTHENTICATOR = "OrganizationAuthenticator";
 
+    public static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
+
     /**
      * Constants related to request parameters.
      */
