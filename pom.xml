@@ -31,6 +31,7 @@
     <url>http://wso2.org</url>
     <modules>
         <module>components/org.wso2.carbon.identity.oauth2.grant.organizationswitch</module>
+        <module>components/org.wso2.carbon.identity.oauth2.grant.regionalswitch</module>
     </modules>
 
     <scm>
@@ -224,5 +225,6 @@
         <compiler-source.version>1.8</compiler-source.version>
         <compiler-target.version>1.8</compiler-target.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <wso2.json>3.0.0.wso2v1</wso2.json>
     </properties>
 </project>
