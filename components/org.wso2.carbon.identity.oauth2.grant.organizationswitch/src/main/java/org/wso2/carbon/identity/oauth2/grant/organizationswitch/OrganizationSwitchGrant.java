@@ -151,7 +151,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        // In the Asgardeo console's token system, users are given two tokens upon login - an Authorization code token
+        // In the token system, users are given two tokens upon login - an Authorization code token
         // and an Organization Switch Grant token. The latter is generated using the former and is utilized to
         // access resources. Upon logout, only the Authorization code token is revoked, leaving the
         // Organization Switch Grant token active.  To address this, a prefix is added to the Authorization code token's
