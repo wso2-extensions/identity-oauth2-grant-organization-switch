@@ -1,22 +1,12 @@
-package org.wso2.carbon.identity.oauth2.grant.regionalswitch;
-
 /*
- * Copyright (c) 2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
  *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * This software is the property of WSO2 LLC. and its suppliers, if any.
+ * Dissemination of any information or reproduction of any material contained
+ * herein in any form is strictly forbidden, unless permitted by WSO2 expressly.
+ * You may not alter or remove any copyright or other notice from copies of this content.
  */
+package org.wso2.carbon.identity.oauth2.grant.regionalswitch;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -83,18 +73,15 @@ public class RegionalSwitchGrant extends AbstractAuthorizationGrantHandler {
         // Parse the JWT token
         if (StringUtils.isNotEmpty(token)) {
             String[] jwtTokenPayload = token.split("\\.");
-            String jwtTokenHeaderPayload = new String(Base64.getUrlDecoder().decode(jwtTokenPayload[0]), StandardCharsets.UTF_8);
-            String jwtTokenPayloadJson = new String(Base64.getUrlDecoder().decode(jwtTokenPayload[1]), StandardCharsets.UTF_8);
+            String jwtTokenHeaderPayload = new String(Base64.getUrlDecoder().decode(jwtTokenPayload[0]),
+                    StandardCharsets.UTF_8);
+            String jwtTokenPayloadJson = new String(Base64.getUrlDecoder().decode(jwtTokenPayload[1]),
+                    StandardCharsets.UTF_8);
 
 //            verifyJWTSignature(jwtTokenPayload);
 
             JSONObject payload = new JSONObject(jwtTokenPayloadJson);
             String tenantedUsername = payload.getString("sub");
-            System.out.println("Tenanted Username: " + tenantedUsername);
-            username = payload.getString("username");
-            System.out.println("The username: " + username);
-            System.out.println("The username: " + username);
-
             JSONArray regionalUserAssociations = payload.getJSONArray("regional_user_associations");
 
             for (int i = 0; i < regionalUserAssociations.length(); i++) {
@@ -116,7 +103,8 @@ public class RegionalSwitchGrant extends AbstractAuthorizationGrantHandler {
                         try {
                             tenantId = realmService.getTenantManager().getTenantId(authenticatedUser.getTenantDomain());
                             userStoreManager
-                                    = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+                                    = (AbstractUserStoreManager) realmService.
+                                    getTenantUserRealm(tenantId).getUserStoreManager();
                             userId = userStoreManager.getUserIDFromUserName(authenticatedUser.getUserName());
                         } catch (UserStoreException e) {
                             String errorMessage = "Error while validating receiving userid of the user:" + username;
@@ -158,9 +146,9 @@ public class RegionalSwitchGrant extends AbstractAuthorizationGrantHandler {
         verifier.update((parts[0] + "." + parts[1]).getBytes());
         boolean verified = verifier.verify(signature);
         if (verified) {
-            System.out.println("Signature Verified");
+            LOG.info("Signature Verified");
         } else {
-            System.out.println("Signature is not Verified");
+            LOG.info("Signature is not Verified");
         }
     }
 
