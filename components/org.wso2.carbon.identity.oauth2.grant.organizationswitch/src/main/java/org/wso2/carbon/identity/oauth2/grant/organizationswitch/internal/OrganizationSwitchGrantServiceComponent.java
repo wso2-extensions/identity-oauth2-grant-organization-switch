@@ -24,6 +24,8 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 
 /**
@@ -36,6 +38,33 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationUser
 public class OrganizationSwitchGrantServiceComponent {
 
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrantServiceComponent.class);
+
+    /**
+     * Set OAuth2 token validation service.
+     *
+     * @param oAuth2TokenValidationService OAuth2TokenValidationService
+     */
+    @Reference(name = "identity.oauth2.token.validation.service.component",
+            service = OAuth2TokenValidationService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOAuth2TokenValidationService")
+    protected void setOAuth2TokenValidationService(OAuth2TokenValidationService oAuth2TokenValidationService) {
+
+        LOG.debug("OAuth2 Token Validation Service is set.");
+        OrganizationSwitchGrantDataHolder.getInstance().setOAuth2TokenValidationService(oAuth2TokenValidationService);
+    }
+
+    /**
+     * Unset OAuth2 token validation service.
+     *
+     * @param oAuth2TokenValidationService OAuth2TokenValidationService
+     */
+    protected void unsetOAuth2TokenValidationService(OAuth2TokenValidationService oAuth2TokenValidationService) {
+
+        LOG.debug("OAuth2 Token Validation Service is unset.");
+        OrganizationSwitchGrantDataHolder.getInstance().setOAuth2TokenValidationService(null);
+    }
 
     @Reference(name = "identity.organization.management.user.resident.resolver.service.component",
             service = OrganizationUserResidentResolverService.class,
@@ -54,5 +83,30 @@ public class OrganizationSwitchGrantServiceComponent {
 
         LOG.debug("Organization user resident resolver service is unset.");
         OrganizationSwitchGrantDataHolder.getInstance().setOrganizationUserResidentResolverService(null);
+    }
+
+    /**
+     * Set organization management service implementation.
+     *
+     * @param organizationManager OrganizationManager
+     */
+    @Reference(name = "identity.organization.management.component",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManager")
+    protected void setOrganizationManager(OrganizationManager organizationManager) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setOrganizationManager(organizationManager);
+    }
+
+    /**
+     * Unset organization management service implementation.
+     *
+     * @param organizationManager OrganizationManager
+     */
+    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setOrganizationManager(null);
     }
 }

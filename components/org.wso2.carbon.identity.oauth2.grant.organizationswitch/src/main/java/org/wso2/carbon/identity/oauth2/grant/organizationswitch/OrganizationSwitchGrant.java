@@ -26,9 +26,9 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
-import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
@@ -44,9 +44,8 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
-import org.wso2.carbon.identity.organization.management.service.OrganizationManagerImpl;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -59,6 +58,7 @@ import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ORGANIZATION_AUTHENTICATOR;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT;
 import static org.wso2.carbon.user.core.UserCoreConstants.TENANT_DOMAIN_COMBINER;
 
 /**
@@ -68,7 +68,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
     private static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
-    public OrganizationManager organizationManager = new OrganizationManagerImpl();
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -77,7 +76,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
         String token = extractParameter(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM, tokReqMsgCtx);
         String organizationId = extractParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, tokReqMsgCtx);
-        String tokenRequestedTenantDomain = getTenantDomainFromOrganizationId(organizationId);
         OAuth2TokenValidationResponseDTO validationResponseDTO = validateToken(token);
 
         if (!validationResponseDTO.isValid()) {
@@ -92,17 +90,14 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         AuthenticatedUser authorizedUser = nonNull(tokenDO) ? tokenDO.getAuthzUser() :
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
-        if (StringUtils.equals(tokenRequestedTenantDomain, authorizedUser.getTenantDomain())) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Provided token was already issued for the requested tenant domain: " +
-                        tokenRequestedTenantDomain);
-            }
-            throw new IdentityOAuth2Exception("Provided token was already issued for the requested tenant domain.");
-        }
+
+        checkOrganizationIsAllowedToSwitch(getOrganizationIdFromTenantDomain(authorizedUser.getTenantDomain()),
+                organizationId);
+
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(authorizedUser.getUserName());
         authenticatedUser.setUserStoreDomain(authorizedUser.getUserStoreDomain());
-        authenticatedUser.setTenantDomain(tokenRequestedTenantDomain);
+        authenticatedUser.setTenantDomain(getTenantDomainFromOrganizationId(organizationId));
 
         String userId = null;
         if (authorizedUser.isFederatedUser()) {
@@ -183,7 +178,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
      */
     private OAuth2TokenValidationResponseDTO validateToken(String accessToken) {
 
-        OAuth2TokenValidationService oAuth2TokenValidationService = new OAuth2TokenValidationService();
         OAuth2TokenValidationRequestDTO requestDTO = new OAuth2TokenValidationRequestDTO();
         OAuth2TokenValidationRequestDTO.OAuth2AccessToken token = requestDTO.new OAuth2AccessToken();
 
@@ -197,16 +191,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         OAuth2TokenValidationRequestDTO.TokenValidationContextParam[] contextParams = {contextParam};
         requestDTO.setContext(contextParams);
 
-        OAuth2ClientApplicationDTO clientApplicationDTO = oAuth2TokenValidationService
-                .findOAuthConsumerIfTokenIsValid
-                        (requestDTO);
+        OAuth2ClientApplicationDTO clientApplicationDTO = OrganizationSwitchGrantDataHolder.getInstance()
+                .getOAuth2TokenValidationService().findOAuthConsumerIfTokenIsValid(requestDTO);
         return clientApplicationDTO.getAccessTokenValidationResponse();
     }
 
-    private String getUserIdFromAuthorizedUser(User authorizedUser) throws OrganizationSwitchGrantException {
+    private String getUserIdFromAuthorizedUser(AuthenticatedUser authorizedUser) throws OrganizationSwitchGrantException {
 
         try {
-            return new AuthenticatedUser(authorizedUser).getUserId();
+            return authorizedUser.getUserId();
         } catch (UserIdNotFoundException e) {
             throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER, e);
         }
@@ -215,10 +208,21 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private String getTenantDomainFromOrganizationId(String organizationId) throws OrganizationSwitchGrantException {
 
         try {
-            return organizationManager.resolveTenantDomain(organizationId);
+            return OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
         } catch (OrganizationManagementException e) {
             throw OrganizationSwitchGrantUtil.handleServerException(
                     ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN, e);
+        }
+    }
+
+    private String getOrganizationIdFromTenantDomain(String tenantDomain) throws OrganizationSwitchGrantException {
+
+        try {
+            return OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT, e);
         }
     }
 
@@ -231,6 +235,29 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                     .resolveUserFromResidentOrganization(username, null, organizationId);
         } catch (OrganizationManagementException e) {
             throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER, e);
+        }
+    }
+
+    private void checkOrganizationIsAllowedToSwitch(String tokenIssuedOrgId, String tokenRequestedOrgId)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.equals(tokenIssuedOrgId, tokenRequestedOrgId)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Provided token was already issued for the requested organization: " + tokenRequestedOrgId);
+            }
+            throw new IdentityOAuth2ClientException("Provided token was already issued for the requested tenant domain.");
+        }
+        try {
+            OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager()
+                    .getAncestorOrganizationIds(tokenRequestedOrgId)
+                    .stream()
+                    .filter(ancestorOrgId -> ancestorOrgId.equals(tokenIssuedOrgId))
+                    .findFirst()
+                    .orElseThrow(() -> new IdentityOAuth2ClientException("Organization switch is only allowed for the " +
+                            "child organizations of the token issued organization"));
+        } catch (OrganizationManagementServerException e) {
+            throw new IdentityOAuth2ServerException(
+                    "Error while retrieving ancestor organization ids for the organization: " + tokenRequestedOrgId, e);
         }
     }
 }
