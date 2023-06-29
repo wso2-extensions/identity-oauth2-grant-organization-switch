@@ -44,10 +44,13 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import static java.util.Objects.nonNull;
@@ -238,26 +241,40 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         }
     }
 
-    private void checkOrganizationIsAllowedToSwitch(String tokenIssuedOrgId, String tokenRequestedOrgId)
+    private void checkOrganizationIsAllowedToSwitch(String currentOrgId, String switchOrgId)
             throws IdentityOAuth2Exception {
 
-        if (StringUtils.equals(tokenIssuedOrgId, tokenRequestedOrgId)) {
+        if (StringUtils.equals(currentOrgId, switchOrgId)) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Provided token was already issued for the requested organization: " + tokenRequestedOrgId);
+                LOG.debug("Provided token was already issued for the requested organization: " + switchOrgId);
             }
-            throw new IdentityOAuth2ClientException("Provided token was already issued for the requested tenant domain.");
+            throw new IdentityOAuth2ClientException("Provided token was already issued for the requested organization.");
         }
+        int subOrgStartLevel = Utils.getSubOrgStartLevel();
+        if (subOrgStartLevel == 1) {
+            return;
+        }
+
         try {
-            OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager()
-                    .getAncestorOrganizationIds(tokenRequestedOrgId)
-                    .stream()
-                    .filter(ancestorOrgId -> ancestorOrgId.equals(tokenIssuedOrgId))
-                    .findFirst()
-                    .orElseThrow(() -> new IdentityOAuth2ClientException("Organization switch is only allowed for the " +
-                            "child organizations of the token issued organization"));
+            List<String> ancestorsOfCurrentOrg = getOrganizationManager().getAncestorOrganizationIds(currentOrgId);
+            List<String> ancestorsOfSwitchingOrg = getOrganizationManager().getAncestorOrganizationIds(switchOrgId);
+            if (ancestorsOfCurrentOrg != null && ancestorsOfSwitchingOrg != null
+                    && ancestorsOfCurrentOrg.size() >= subOrgStartLevel
+                    && ancestorsOfSwitchingOrg.size() >= subOrgStartLevel
+                    && ancestorsOfCurrentOrg.get(ancestorsOfCurrentOrg.size() - subOrgStartLevel)
+                        .equals(ancestorsOfSwitchingOrg.get(ancestorsOfSwitchingOrg.size() - subOrgStartLevel))) {
+                return;
+            }
+            throw new IdentityOAuth2ClientException("Organization switch is only allowed for the child organizations of " +
+                    "the token issued organization");
         } catch (OrganizationManagementServerException e) {
-            throw new IdentityOAuth2ServerException(
-                    "Error while retrieving ancestor organization ids for the organization: " + tokenRequestedOrgId, e);
+            throw new IdentityOAuth2ServerException("Error while retrieving ancestor organization ids for " +
+                    "the organizations: " + currentOrgId + "& " + switchOrgId, e);
         }
+    }
+
+    private OrganizationManager getOrganizationManager() {
+
+        return OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager();
     }
 }
