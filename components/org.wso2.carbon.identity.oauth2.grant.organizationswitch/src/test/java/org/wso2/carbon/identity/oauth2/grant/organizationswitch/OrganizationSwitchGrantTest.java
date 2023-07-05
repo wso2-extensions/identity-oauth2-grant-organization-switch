@@ -45,8 +45,6 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -61,10 +59,8 @@ public class OrganizationSwitchGrantTest {
 
     private static final String TOKEN_ISSUED_ORG_ID = "90184a8d-113f-5211-a0d5-efe36b082233";
     private static final String TOKEN_ISSUED_TENANT_DOMAIN = "EasyMeet";
-    private static final List<String> TOKEN_ISSUED_ORG_ANCESTORS = Arrays.asList("EasyMeet", "Super");
     private static final  String SWITCHING_ORG_ID = "70184a8d-113f-5211-ac0d5-efe39b082214";
     private static final String SWITCHING_ORG_TENANT_DOMAIN = "Medverse";
-    private static final List<String> SWITCHING_ORG_ANCESTORS = Arrays.asList("Medverse","EasyMeet", "Super");
 
 
     private static final String ACCESS_TOKEN = "a8fb49be-5a28-30bd-98ea-dad7b87d5d86";
@@ -120,12 +116,13 @@ public class OrganizationSwitchGrantTest {
     }
 
     @Test(expectedExceptions = IdentityOAuth2ClientException.class)
-    public void testWhenSwitchingOrgIsInvalid() throws IdentityOAuth2Exception, OrganizationManagementServerException {
+    public void testWhenSwitchingOrgIsInvalid() throws IdentityOAuth2Exception, OrganizationManagementException {
 
         when(mockOAuth2TokenValidationResponseDTO.isValid()).thenReturn(true);
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
-        when(mockOrganizationManager.getAncestorOrganizationIds(nullable(String.class))).thenReturn(new ArrayList<>());
+        when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
+        when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(-1);
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
     }
 
@@ -137,10 +134,7 @@ public class OrganizationSwitchGrantTest {
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
         when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
-        when(mockOrganizationManager.getAncestorOrganizationIds(TOKEN_ISSUED_ORG_ID)).thenReturn(
-                Arrays.asList("EasyMeet", "Super"));
-        when(mockOrganizationManager.getAncestorOrganizationIds(SWITCHING_ORG_ID)).thenReturn(
-                Arrays.asList("Medverse", "EasyMeet", "Super"));
+        when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(1);
         when(mockAuthenticatedUser.getUserId()).thenReturn("12345");
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
     }
@@ -163,9 +157,7 @@ public class OrganizationSwitchGrantTest {
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
         when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
-        when(mockOrganizationManager.getAncestorOrganizationIds(TOKEN_ISSUED_ORG_ID)).thenReturn(TOKEN_ISSUED_ORG_ANCESTORS);
-        when(mockOrganizationManager.getAncestorOrganizationIds(SWITCHING_ORG_ID)).thenReturn(
-                Arrays.asList("WSO2", "Zoom", "Super"));
+        when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(-1);
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
     }
 
@@ -178,8 +170,7 @@ public class OrganizationSwitchGrantTest {
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
         when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
-        when(mockOrganizationManager.getAncestorOrganizationIds(TOKEN_ISSUED_ORG_ID)).thenReturn(TOKEN_ISSUED_ORG_ANCESTORS);
-        when(mockOrganizationManager.getAncestorOrganizationIds(SWITCHING_ORG_ID)).thenReturn(SWITCHING_ORG_ANCESTORS);
+        when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(2);
         when(mockAuthenticatedUser.getUserId()).thenReturn("12345");
         when(mockAccessTokenDO.getTokenBinding()).thenReturn(tokenBinding);
 

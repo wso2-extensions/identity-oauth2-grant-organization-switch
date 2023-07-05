@@ -250,26 +250,14 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             }
             throw new IdentityOAuth2ClientException("Provided token was already issued for the requested organization.");
         }
-        int subOrgStartLevel = Utils.getSubOrgStartLevel();
-        if (subOrgStartLevel == 1) {
-            return;
-        }
-
         try {
-            List<String> ancestorsOfCurrentOrg = getOrganizationManager().getAncestorOrganizationIds(currentOrgId);
-            List<String> ancestorsOfSwitchingOrg = getOrganizationManager().getAncestorOrganizationIds(switchOrgId);
-            if (ancestorsOfCurrentOrg != null && ancestorsOfSwitchingOrg != null
-                    && ancestorsOfCurrentOrg.size() >= subOrgStartLevel
-                    && ancestorsOfSwitchingOrg.size() >= subOrgStartLevel
-                    && ancestorsOfCurrentOrg.get(ancestorsOfCurrentOrg.size() - subOrgStartLevel)
-                        .equals(ancestorsOfSwitchingOrg.get(ancestorsOfSwitchingOrg.size() - subOrgStartLevel))) {
-                return;
+            if (getOrganizationManager()
+                    .getRelativeDepthBetweenOrganizationsInSameBranch(currentOrgId, switchOrgId) < 0) {
+                throw new IdentityOAuth2ClientException("Organization switch is only allowed for the organizations " +
+                        "in the same branch.");
             }
-            throw new IdentityOAuth2ClientException("Organization switch is only allowed for the child organizations of " +
-                    "the token issued organization");
-        } catch (OrganizationManagementServerException e) {
-            throw new IdentityOAuth2ServerException("Error while retrieving ancestor organization ids for " +
-                    "the organizations: " + currentOrgId + "& " + switchOrgId, e);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2ServerException("Error while checking organizations allowed to switch.", e);
         }
     }
 
