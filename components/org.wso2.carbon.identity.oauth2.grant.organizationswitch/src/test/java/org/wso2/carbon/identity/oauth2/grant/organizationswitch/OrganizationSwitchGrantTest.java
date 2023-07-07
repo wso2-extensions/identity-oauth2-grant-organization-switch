@@ -61,6 +61,7 @@ public class OrganizationSwitchGrantTest {
     private static final String TOKEN_ISSUED_TENANT_DOMAIN = "EasyMeet";
     private static final  String SWITCHING_ORG_ID = "70184a8d-113f-5211-ac0d5-efe39b082214";
     private static final String SWITCHING_ORG_TENANT_DOMAIN = "Medverse";
+    private static final String MOCK_TOKEN_BINDING_REFERENCE = "mockTokenBindingReference";
 
 
     private static final String ACCESS_TOKEN = "a8fb49be-5a28-30bd-98ea-dad7b87d5d86";
@@ -166,6 +167,7 @@ public class OrganizationSwitchGrantTest {
             throws OrganizationManagementException, UserIdNotFoundException, IdentityOAuth2Exception {
 
         TokenBinding tokenBinding = new TokenBinding();
+        tokenBinding.setBindingReference(MOCK_TOKEN_BINDING_REFERENCE);
         when(mockOAuth2TokenValidationResponseDTO.isValid()).thenReturn(true);
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
@@ -175,6 +177,8 @@ public class OrganizationSwitchGrantTest {
         when(mockAccessTokenDO.getTokenBinding()).thenReturn(tokenBinding);
 
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
-        assert oAuthTokenReqMessageContext.getProperty(TOKEN_BINDING_REFERENCE) == tokenBinding;
+        assert MOCK_TOKEN_BINDING_REFERENCE.equals(
+                ((TokenBinding) oAuthTokenReqMessageContext.getProperty(
+                        TOKEN_BINDING_REFERENCE)).getBindingReference());
     }
 }
