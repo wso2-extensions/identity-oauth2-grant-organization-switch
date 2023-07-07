@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- ~ Copyright (c) 2022, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ ~ Copyright (c) 2022-2023, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  ~
  ~ WSO2 LLC. licenses this file to you under the Apache License,
  ~ Version 2.0 (the "License"); you may not use this file except
@@ -200,7 +200,7 @@
         <carbon.kernel.package.import.version.range>[4.7.0, 5.0.0)</carbon.kernel.package.import.version.range>
         <carbon.user.api.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.user.api.imp.pkg.version.range>
 
-        <carbon.identity.org.mgt.core.version>1.0.0</carbon.identity.org.mgt.core.version>
+        <carbon.identity.org.mgt.core.version>1.0.54</carbon.identity.org.mgt.core.version>
         <org.wso2.identity.organization.mgt.core.imp.pkg.version.range>[1.0.0,2.0.0)
         </org.wso2.identity.organization.mgt.core.imp.pkg.version.range>
 
@@ -224,5 +224,10 @@
         <compiler-source.version>1.8</compiler-source.version>
         <compiler-target.version>1.8</compiler-target.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <org.mockito.version>4.6.1</org.mockito.version>
+        <testng.version>6.9.10</testng.version>
+        <maven.surefire.plugin.version>2.22.0</maven.surefire.plugin.version>
+        <powermock.version>2.0.2</powermock.version>
     </properties>
 </project>
