@@ -40,3 +40,4 @@ jobs:
         run: mvn clean install -U -B
       - name: Delete SNAPSHOT artifacts
         run: find ~/.m2/repository/ -name "*-SNAPSHOT" -type d -print -prune -exec rm -r {} +
+        
