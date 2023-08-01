@@ -31,6 +31,7 @@
     <url>http://wso2.org</url>
     <modules>
         <module>components/org.wso2.carbon.identity.oauth2.grant.organizationswitch</module>
+        <module>features/org.wso2.carbon.identity.oauth2.grant.organizationswitch.server.feature</module>
     </modules>
 
     <scm>
@@ -78,6 +79,12 @@
                 <groupId>org.apache.oltu.oauth2</groupId>
                 <artifactId>org.apache.oltu.oauth2.client</artifactId>
                 <version>${oltu.oauth2.client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.extension.identity.oauth2.grantType.organizationswitch</groupId>
+                <artifactId>org.wso2.carbon.identity.oauth2.grant.organizationswitch</artifactId>
+                <version>${project.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.ops4j.pax.logging</groupId>
@@ -224,6 +231,7 @@
         <compiler-source.version>1.8</compiler-source.version>
         <compiler-target.version>1.8</compiler-target.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <carbon.p2.plugin.version>5.1.2</carbon.p2.plugin.version>
 
         <org.mockito.version>4.6.1</org.mockito.version>
         <testng.version>6.9.10</testng.version>
