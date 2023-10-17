@@ -207,11 +207,11 @@
         <carbon.kernel.package.import.version.range>[4.7.0, 5.0.0)</carbon.kernel.package.import.version.range>
         <carbon.user.api.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.user.api.imp.pkg.version.range>
 
-        <carbon.identity.org.mgt.core.version>1.0.54</carbon.identity.org.mgt.core.version>
+        <carbon.identity.org.mgt.core.version>1.0.68</carbon.identity.org.mgt.core.version>
         <org.wso2.identity.organization.mgt.core.imp.pkg.version.range>[1.0.0,2.0.0)
         </org.wso2.identity.organization.mgt.core.imp.pkg.version.range>
 
-        <carbon.identity.framework.version>5.21.0</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.25.390</carbon.identity.framework.version>
         <carbon.identity.package.import.version.range>[5.20.0, 7.0.0)
         </carbon.identity.package.import.version.range>
         <identity.inbound.auth.oauth.version>6.7.116</identity.inbound.auth.oauth.version>
