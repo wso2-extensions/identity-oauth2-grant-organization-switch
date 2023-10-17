@@ -63,7 +63,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         super.validateGrant(tokReqMsgCtx);
 
         String token = extractParameter(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM, tokReqMsgCtx);
-        String switchOrganizationId = extractParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, tokReqMsgCtx);
+        String accessingOrgId = extractParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, tokReqMsgCtx);
         OAuth2TokenValidationResponseDTO validationResponseDTO = validateToken(token);
 
         if (!validationResponseDTO.isValid()) {
@@ -79,13 +79,13 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
 
-        String appResideOrganization = getOrganizationIdFromTenantDomain(authorizedUser.getTenantDomain());
-        checkOrganizationIsAllowedToSwitch(appResideOrganization, switchOrganizationId);
+        String appResideOrgId = getOrganizationIdFromTenantDomain(authorizedUser.getTenantDomain());
+        checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
-        authenticatedUser.setAccessingOrganization(switchOrganizationId);
+        authenticatedUser.setAccessingOrganization(accessingOrgId);
         if (StringUtils.isEmpty(authorizedUser.getUserResidentOrganization())) {
-            authenticatedUser.setUserResidentOrganization(appResideOrganization);
+            authenticatedUser.setUserResidentOrganization(appResideOrgId);
         } else {
             authenticatedUser.setUserResidentOrganization(authorizedUser.getUserResidentOrganization());
         }
