@@ -27,6 +27,8 @@ public class OrganizationSwitchGrantConstants {
 
     public static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
 
+    public static final String CONSOLE_APP_NAME = "Console";
+
     /**
      * Constants related to request parameters.
      */

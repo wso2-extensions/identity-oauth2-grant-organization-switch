@@ -24,7 +24,10 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
+import org.wso2.carbon.identity.organization.management.application.internal.OrgApplicationMgtDataHolder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 
@@ -108,5 +111,57 @@ public class OrganizationSwitchGrantServiceComponent {
     protected void unsetOrganizationManager(OrganizationManager organizationManager) {
 
         OrganizationSwitchGrantDataHolder.getInstance().setOrganizationManager(null);
+    }
+
+    /**
+     * Set organization application management service implementation.
+     *
+     * @param orgApplicationManager OrganizationManager.
+     */
+    @Reference(name = "identity.organization.application.management.component",
+            service = OrgApplicationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrgApplicationManager")
+    protected void setOrgApplicationManager(OrgApplicationManager orgApplicationManager) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setOrgApplicationManager(orgApplicationManager);
+        LOG.debug("Organization Application Manager is set in the Authenticator");
+    }
+
+    /**
+     * Unset organization application management service implementation.
+     *
+     * @param orgApplicationManager OrganizationManager.
+     */
+    protected void unsetOrgApplicationManager(OrgApplicationManager orgApplicationManager) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setOrgApplicationManager(null);
+        LOG.debug("Organization Application Manager is unset in the Authenticator");
+    }
+
+    /**
+     * Set application management service implementation.
+     *
+     * @param applicationManagementService ApplicationManagementService.
+     */
+    @Reference(name = "identity.application.management.component",
+            service = ApplicationManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationManagementService")
+    protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setApplicationManagementService(applicationManagementService);
+    }
+
+    /**
+     * Unset application management service implementation.
+     *
+     * @param applicationManagementService ApplicationManagementService.
+     */
+    protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setApplicationManagementService(null);
     }
 }
