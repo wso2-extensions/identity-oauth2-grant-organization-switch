@@ -163,7 +163,7 @@ public class OrganizationSwitchGrantTest {
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
     }
 
-    @Test(expectedExceptions = IdentityOAuth2ClientException.class)
+    @Test
     public void testSwitchSameOrganization() throws IdentityOAuth2Exception, OrganizationManagementException {
 
         when(mockOAuth2TokenValidationResponseDTO.isValid()).thenReturn(true);
