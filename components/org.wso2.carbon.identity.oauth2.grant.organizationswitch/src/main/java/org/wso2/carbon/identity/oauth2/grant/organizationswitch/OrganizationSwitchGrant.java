@@ -179,11 +179,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                                                     String appName) throws IdentityOAuth2Exception {
 
         if (StringUtils.equals(currentOrgId, switchOrgId)) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Provided token was already issued for the requested organization: " + switchOrgId);
-            }
-            throw new IdentityOAuth2ClientException(
-                    "Provided token was already issued for the requested organization.");
+            return;
         }
         try {
             if (getOrganizationManager()
