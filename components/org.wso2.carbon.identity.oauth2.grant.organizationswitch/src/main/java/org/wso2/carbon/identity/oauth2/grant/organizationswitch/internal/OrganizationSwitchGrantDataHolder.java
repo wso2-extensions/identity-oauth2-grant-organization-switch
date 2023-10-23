@@ -18,7 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal;
 
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 
@@ -32,6 +34,8 @@ public class OrganizationSwitchGrantDataHolder {
     private OAuth2TokenValidationService oAuth2TokenValidationService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
     private OrganizationManager organizationManager;
+    private OrgApplicationManager orgApplicationManager;
+    private ApplicationManagementService applicationManagementService;
 
     public static OrganizationSwitchGrantDataHolder getInstance() {
 
@@ -87,5 +91,45 @@ public class OrganizationSwitchGrantDataHolder {
     public void setOrganizationManager(OrganizationManager organizationManager) {
 
         this.organizationManager = organizationManager;
+    }
+
+    /**
+     * Get {@link OrgApplicationManager}.
+     *
+     * @return organization application manager instance {@link OrgApplicationManager}.
+     */
+    public OrgApplicationManager getOrgApplicationManager() {
+
+        return orgApplicationManager;
+    }
+
+    /**
+     * Set {@link OrgApplicationManager}.
+     *
+     * @param orgApplicationManager Instance of {@link OrgApplicationManager}.
+     */
+    public void setOrgApplicationManager(OrgApplicationManager orgApplicationManager) {
+
+        this.orgApplicationManager = orgApplicationManager;
+    }
+
+    /**
+     * Get {@link ApplicationManagementService}.
+     *
+     * @return application management service instance {@link ApplicationManagementService}.
+     */
+    public ApplicationManagementService getApplicationManagementService() {
+
+        return applicationManagementService;
+    }
+
+    /**
+     * Set {@link ApplicationManagementService}.
+     *
+     * @param applicationManagementService Instance of {@link ApplicationManagementService}.
+     */
+    public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        this.applicationManagementService = applicationManagementService;
     }
 }

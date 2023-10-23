@@ -23,6 +23,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
@@ -40,6 +44,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
@@ -56,6 +61,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
     private static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
+    private static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -65,7 +71,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         String token = extractParameter(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM, tokReqMsgCtx);
         String accessingOrgId = extractParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, tokReqMsgCtx);
         OAuth2TokenValidationResponseDTO validationResponseDTO = validateToken(token);
-
         if (!validationResponseDTO.isValid()) {
             LOG.debug("Access token validation failed.");
 
@@ -80,7 +85,10 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                         validationResponseDTO.getAuthorizedUser());
 
         String appResideOrgId = getOrganizationIdFromTenantDomain(authorizedUser.getTenantDomain());
-        checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId);
+        OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP_PROPERTY);
+        String appName = oAuthAppDO.getApplicationName();
+        String appId = getAppID(appName, authorizedUser.getTenantDomain());
+        checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId, appId, appName);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
         authenticatedUser.setAccessingOrganization(accessingOrgId);
@@ -167,8 +175,8 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         }
     }
 
-    private void checkOrganizationIsAllowedToSwitch(String currentOrgId, String switchOrgId)
-            throws IdentityOAuth2Exception {
+    private void checkOrganizationIsAllowedToSwitch(String currentOrgId, String switchOrgId, String appID,
+                                                    String appName) throws IdentityOAuth2Exception {
 
         if (StringUtils.equals(currentOrgId, switchOrgId)) {
             if (LOG.isDebugEnabled()) {
@@ -183,6 +191,13 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                 throw new IdentityOAuth2ClientException("Organization switch is only allowed for the organizations " +
                         "in the same branch.");
             }
+            // Organization switching is allowed only for the organizations that have shared the application.
+            if (!OrganizationSwitchGrantConstants.CONSOLE_APP_NAME.equals(appName) &&
+                    !getOrgApplicationManager().isApplicationSharedWithGivenOrganization(appID, currentOrgId,
+                            switchOrgId)) {
+                throw new IdentityOAuth2ClientException("Organization switching is not allowed for organizations " +
+                        "that have not shared the application");
+            }
         } catch (OrganizationManagementException e) {
             throw new IdentityOAuth2ServerException("Error while checking organizations allowed to switch.", e);
         }
@@ -191,5 +206,29 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private OrganizationManager getOrganizationManager() {
 
         return OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager();
+    }
+
+    private OrgApplicationManager getOrgApplicationManager() {
+
+        return OrganizationSwitchGrantDataHolder.getInstance().getOrgApplicationManager();
+    }
+
+    private ApplicationManagementService getApplicationManagementService() {
+
+        return OrganizationSwitchGrantDataHolder.getInstance().getApplicationManagementService();
+    }
+
+    private String getAppID(String appName, String tenantDomain) throws IdentityOAuth2Exception {
+        try {
+            ApplicationBasicInfo applicationBasicInfo = getApplicationManagementService().
+                    getApplicationBasicInfoByName(appName, tenantDomain);
+            if (applicationBasicInfo.getApplicationResourceId() != null) {
+                return applicationBasicInfo.getApplicationResourceId();
+            } else {
+                throw new IdentityOAuth2Exception("Application not found for the name: " + appName);
+            }
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while getting application basic info.", e);
+        }
     }
 }

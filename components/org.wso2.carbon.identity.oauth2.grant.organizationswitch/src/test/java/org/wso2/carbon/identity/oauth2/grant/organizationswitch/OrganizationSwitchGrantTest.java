@@ -25,7 +25,12 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -39,6 +44,7 @@ import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
@@ -62,12 +68,16 @@ public class OrganizationSwitchGrantTest {
     private static final  String SWITCHING_ORG_ID = "70184a8d-113f-5211-ac0d5-efe39b082214";
     private static final String SWITCHING_ORG_TENANT_DOMAIN = "Medverse";
     private static final String MOCK_TOKEN_BINDING_REFERENCE = "mockTokenBindingReference";
-
-
+    private static final String APPLICATION_NAME = "B2B-APP";
+    private static final String APPLICATION_ID = "123456";
     private static final String ACCESS_TOKEN = "a8fb49be-5a28-30bd-98ea-dad7b87d5d86";
     private OAuth2TokenValidationService mockOAuth2TokenValidationService;
     private OrganizationManager mockOrganizationManager;
+    private OrgApplicationManager mockOrgApplicationManager;
+    private ApplicationManagementService mockApplicationManagementService;
     private OAuth2ClientApplicationDTO mockOAuth2ClientApplicationDTO;
+    private OAuthAppDO mockOAuthAppDO;
+    private ApplicationBasicInfo mockApplicationBasicInfo;
     private OAuthTokenReqMessageContext oAuthTokenReqMessageContext;
     private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
     private OAuth2TokenValidationResponseDTO mockOAuth2TokenValidationResponseDTO;
@@ -78,7 +88,7 @@ public class OrganizationSwitchGrantTest {
     private MockedStatic<Utils> mockOrgUtil;
 
     @BeforeClass
-    public void setup() {
+    public void setup() throws IdentityApplicationManagementException {
 
         mockAccessTokenDO = mock(AccessTokenDO.class);
         mockAuthenticatedUser = mock(AuthenticatedUser.class);
@@ -89,6 +99,7 @@ public class OrganizationSwitchGrantTest {
 
         mockOAuth2TokenValidationService = mock(OAuth2TokenValidationService.class);
         mockOAuth2ClientApplicationDTO = mock(OAuth2ClientApplicationDTO.class);
+        mockOAuthAppDO = mock(OAuthAppDO.class);
         mockOAuth2TokenValidationResponseDTO = mock(OAuth2TokenValidationResponseDTO.class);
         OrganizationSwitchGrantDataHolder.getInstance().setOAuth2TokenValidationService(mockOAuth2TokenValidationService);
         when(mockOAuth2TokenValidationService.findOAuthConsumerIfTokenIsValid(any())).thenReturn(mockOAuth2ClientApplicationDTO);
@@ -96,6 +107,15 @@ public class OrganizationSwitchGrantTest {
 
         mockOrganizationManager = mock(OrganizationManager.class);
         OrganizationSwitchGrantDataHolder.getInstance().setOrganizationManager(mockOrganizationManager);
+        mockOrgApplicationManager = mock(OrgApplicationManager.class);
+        OrganizationSwitchGrantDataHolder.getInstance().setOrgApplicationManager(mockOrgApplicationManager);
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        OrganizationSwitchGrantDataHolder.getInstance().setApplicationManagementService(mockApplicationManagementService);
+
+        mockApplicationBasicInfo = mock(ApplicationBasicInfo.class);
+        when(mockOAuthAppDO.getApplicationName()).thenReturn(APPLICATION_NAME);
+        when(mockApplicationManagementService.getApplicationBasicInfoByName(anyString(),anyString())).thenReturn(mockApplicationBasicInfo);
+        when(mockApplicationBasicInfo.getApplicationResourceId()).thenReturn(APPLICATION_ID);
     }
 
     @BeforeMethod
@@ -103,6 +123,7 @@ public class OrganizationSwitchGrantTest {
 
         oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
         oAuthTokenReqMessageContext = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+        oAuthTokenReqMessageContext.addProperty("OAuthAppDO", mockOAuthAppDO);
         organizationSwitchGrant = new OrganizationSwitchGrant();
         RequestParameter[] requestParameters = new RequestParameter[2];
         requestParameters[0] = new RequestParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, SWITCHING_ORG_ID);
@@ -137,6 +158,8 @@ public class OrganizationSwitchGrantTest {
         when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
         when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(1);
         when(mockAuthenticatedUser.getUserId()).thenReturn("12345");
+        when(mockOrgApplicationManager.isApplicationSharedWithGivenOrganization(anyString(),anyString(),anyString())).
+                thenReturn(true);
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
     }
 
@@ -162,6 +185,20 @@ public class OrganizationSwitchGrantTest {
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
     }
 
+    @Test(expectedExceptions = IdentityOAuth2ClientException.class)
+    public void testSwitchOrgWhereAppNotShared()
+            throws OrganizationManagementException, IdentityOAuth2Exception {
+
+        when(mockOAuth2TokenValidationResponseDTO.isValid()).thenReturn(true);
+        when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
+        when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
+        when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
+        when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(1);
+        when(mockOrgApplicationManager.isApplicationSharedWithGivenOrganization(anyString(),anyString(),anyString())).
+                thenReturn(false);
+        organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
+    }
+
     @Test
     public void testSameBindingSetForSwitchedToken()
             throws OrganizationManagementException, UserIdNotFoundException, IdentityOAuth2Exception {
@@ -175,7 +212,8 @@ public class OrganizationSwitchGrantTest {
         when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(2);
         when(mockAuthenticatedUser.getUserId()).thenReturn("12345");
         when(mockAccessTokenDO.getTokenBinding()).thenReturn(tokenBinding);
-
+        when(mockOrgApplicationManager.isApplicationSharedWithGivenOrganization(anyString(),anyString(),anyString())).
+                thenReturn(true);
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
         assert MOCK_TOKEN_BINDING_REFERENCE.equals(
                 ((TokenBinding) oAuthTokenReqMessageContext.getProperty(
