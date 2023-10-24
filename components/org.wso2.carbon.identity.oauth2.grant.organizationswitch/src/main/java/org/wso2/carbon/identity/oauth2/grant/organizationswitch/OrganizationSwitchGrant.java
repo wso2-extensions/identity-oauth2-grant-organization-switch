@@ -91,13 +91,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId, appId, appName);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
-        authenticatedUser.setAccessingOrganization(accessingOrgId);
-        if (StringUtils.isEmpty(authorizedUser.getUserResidentOrganization())) {
-            authenticatedUser.setUserResidentOrganization(appResideOrgId);
-        } else {
-            authenticatedUser.setUserResidentOrganization(authorizedUser.getUserResidentOrganization());
+        // The accessing and resident organization values are not set when switching for root organization.
+        if (!StringUtils.equals(appResideOrgId, accessingOrgId)) {
+            authenticatedUser.setAccessingOrganization(accessingOrgId);
+            if (StringUtils.isEmpty(authorizedUser.getUserResidentOrganization())) {
+                authenticatedUser.setUserResidentOrganization(appResideOrgId);
+            } else {
+                authenticatedUser.setUserResidentOrganization(authorizedUser.getUserResidentOrganization());
+            }
         }
-
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
@@ -179,11 +181,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                                                     String appName) throws IdentityOAuth2Exception {
 
         if (StringUtils.equals(currentOrgId, switchOrgId)) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Provided token was already issued for the requested organization: " + switchOrgId);
-            }
-            throw new IdentityOAuth2ClientException(
-                    "Provided token was already issued for the requested organization.");
+            return;
         }
         try {
             if (getOrganizationManager()
