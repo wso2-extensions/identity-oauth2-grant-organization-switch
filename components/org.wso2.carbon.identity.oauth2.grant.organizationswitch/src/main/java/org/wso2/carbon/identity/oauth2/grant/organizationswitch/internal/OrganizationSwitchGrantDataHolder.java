@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 
@@ -36,6 +37,7 @@ public class OrganizationSwitchGrantDataHolder {
     private OrganizationManager organizationManager;
     private OrgApplicationManager orgApplicationManager;
     private ApplicationManagementService applicationManagementService;
+    private OrganizationUserSharingService organizationUserSharingService;
 
     public static OrganizationSwitchGrantDataHolder getInstance() {
 
@@ -131,5 +133,25 @@ public class OrganizationSwitchGrantDataHolder {
     public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
         this.applicationManagementService = applicationManagementService;
+    }
+
+    /**
+     * Get {@link OrganizationUserSharingService}.
+     *
+     * @return Organization user sharing service instance {@link OrganizationUserSharingService}.
+     */
+    public OrganizationUserSharingService getOrganizationUserSharingService() {
+
+        return organizationUserSharingService;
+    }
+
+    /**
+     * Set {@link OrganizationUserSharingService}.
+     *
+     * @param organizationUserSharingService Instance of {@link OrganizationUserSharingService}.
+     */
+    public void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        this.organizationUserSharingService = organizationUserSharingService;
     }
 }
