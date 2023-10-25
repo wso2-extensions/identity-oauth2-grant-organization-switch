@@ -91,18 +91,18 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId, appId, appName);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
-        // When accessing the root org, the accessing org is set to null. The user resident org keeps consistent.
+        // When accessing the root org, the accessing org is set to null.
         if (StringUtils.equals(appResideOrgId, accessingOrgId)) {
             authenticatedUser.setAccessingOrganization(null);
         } else {
-            // Update the accessing organization when switching to an organization.
+            // Update the accessing organization.
             authenticatedUser.setAccessingOrganization(accessingOrgId);
-            // A token issued for B2C login doesn't contain user resident org. Hence, populate as the app resident org.
-            if (StringUtils.isEmpty(authorizedUser.getUserResidentOrganization())) {
-                authenticatedUser.setUserResidentOrganization(appResideOrgId);
-            }
         }
 
+        // Update the user resident organization if not set already.
+        if (StringUtils.isEmpty(authenticatedUser.getUserResidentOrganization())) {
+            authenticatedUser.setUserResidentOrganization(appResideOrgId);
+        }
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
