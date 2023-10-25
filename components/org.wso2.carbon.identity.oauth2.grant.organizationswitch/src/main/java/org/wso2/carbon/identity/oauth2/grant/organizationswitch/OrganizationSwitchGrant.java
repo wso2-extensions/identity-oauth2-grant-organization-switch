@@ -91,15 +91,18 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId, appId, appName);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
-        // The accessing and resident organization values are not set when switching for root organization.
-        if (!StringUtils.equals(appResideOrgId, accessingOrgId)) {
+        // When accessing the root org, the accessing org is set to null. The user resident org keeps consistent.
+        if (StringUtils.equals(appResideOrgId, accessingOrgId)) {
+            authenticatedUser.setAccessingOrganization(null);
+        } else {
+            // Update the accessing organization when switching to an organization.
             authenticatedUser.setAccessingOrganization(accessingOrgId);
+            // A token issued for B2C login doesn't contain user resident org. Hence, populate as the app resident org.
             if (StringUtils.isEmpty(authorizedUser.getUserResidentOrganization())) {
                 authenticatedUser.setUserResidentOrganization(appResideOrgId);
-            } else {
-                authenticatedUser.setUserResidentOrganization(authorizedUser.getUserResidentOrganization());
             }
         }
+
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
@@ -217,6 +220,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     }
 
     private String getAppID(String appName, String tenantDomain) throws IdentityOAuth2Exception {
+
         try {
             ApplicationBasicInfo applicationBasicInfo = getApplicationManagementService().
                     getApplicationBasicInfoByName(appName, tenantDomain);
