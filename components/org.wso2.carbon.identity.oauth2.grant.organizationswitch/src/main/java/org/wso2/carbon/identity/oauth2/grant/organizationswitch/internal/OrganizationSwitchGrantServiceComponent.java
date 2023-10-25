@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
 import org.wso2.carbon.identity.organization.management.application.internal.OrgApplicationMgtDataHolder;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 
@@ -163,5 +164,24 @@ public class OrganizationSwitchGrantServiceComponent {
     protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
         OrganizationSwitchGrantDataHolder.getInstance().setApplicationManagementService(null);
+    }
+
+    @Reference(
+            name = "organization.user.sharing.service",
+            service = OrganizationUserSharingService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationUserAssociationService")
+    protected void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setOrganizationUserSharingService(organizationUserSharingService);
+        LOG.debug("Set organization user association service.");
+    }
+
+    protected void unsetOrganizationUserAssociationService(
+            OrganizationUserSharingService organizationUserSharingService) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setOrganizationUserSharingService(null);
+        LOG.debug("Unset organization user association Service.");
     }
 }
