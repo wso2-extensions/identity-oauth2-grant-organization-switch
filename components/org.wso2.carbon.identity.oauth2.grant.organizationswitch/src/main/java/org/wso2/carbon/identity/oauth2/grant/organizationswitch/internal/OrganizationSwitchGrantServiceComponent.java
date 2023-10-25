@@ -176,7 +176,6 @@ public class OrganizationSwitchGrantServiceComponent {
 
         OrganizationSwitchGrantDataHolder.getInstance().setOrganizationUserSharingService(organizationUserSharingService);
         LOG.debug("Set organization user association service.");
-
     }
 
     protected void unsetOrganizationUserAssociationService(

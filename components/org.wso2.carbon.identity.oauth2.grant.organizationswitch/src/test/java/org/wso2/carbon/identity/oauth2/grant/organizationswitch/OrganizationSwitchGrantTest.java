@@ -112,7 +112,6 @@ public class OrganizationSwitchGrantTest {
         mockOrganizationUserSharingService = mock(OrganizationUserSharingService.class);
         OrganizationSwitchGrantDataHolder.getInstance().setOrganizationUserSharingService(mockOrganizationUserSharingService);
 
-
         mockApplicationBasicInfo = mock(ApplicationBasicInfo.class);
         when(mockOAuthAppDO.getApplicationName()).thenReturn(APPLICATION_NAME);
         when(mockApplicationManagementService.getApplicationBasicInfoByName(anyString(),anyString())).thenReturn(mockApplicationBasicInfo);
