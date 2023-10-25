@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -44,10 +45,12 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
-import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
+
+import java.util.ArrayList;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -70,7 +73,6 @@ public class OrganizationSwitchGrantTest {
     private static final String ACCESS_TOKEN = "a8fb49be-5a28-30bd-98ea-dad7b87d5d86";
     private OAuth2TokenValidationService mockOAuth2TokenValidationService;
     private OrganizationManager mockOrganizationManager;
-    private OrganizationUserSharingService mockOrganizationUserSharingService;
     private OrgApplicationManager mockOrgApplicationManager;
     private ApplicationManagementService mockApplicationManagementService;
     private OAuth2ClientApplicationDTO mockOAuth2ClientApplicationDTO;
@@ -86,7 +88,7 @@ public class OrganizationSwitchGrantTest {
     private MockedStatic<Utils> mockOrgUtil;
 
     @BeforeClass
-    public void setup() throws IdentityApplicationManagementException, OrganizationManagementException {
+    public void setup() throws IdentityApplicationManagementException {
 
         mockAccessTokenDO = mock(AccessTokenDO.class);
         mockAuthenticatedUser = mock(AuthenticatedUser.class);
@@ -109,14 +111,11 @@ public class OrganizationSwitchGrantTest {
         OrganizationSwitchGrantDataHolder.getInstance().setOrgApplicationManager(mockOrgApplicationManager);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         OrganizationSwitchGrantDataHolder.getInstance().setApplicationManagementService(mockApplicationManagementService);
-        mockOrganizationUserSharingService = mock(OrganizationUserSharingService.class);
-        OrganizationSwitchGrantDataHolder.getInstance().setOrganizationUserSharingService(mockOrganizationUserSharingService);
 
         mockApplicationBasicInfo = mock(ApplicationBasicInfo.class);
         when(mockOAuthAppDO.getApplicationName()).thenReturn(APPLICATION_NAME);
         when(mockApplicationManagementService.getApplicationBasicInfoByName(anyString(),anyString())).thenReturn(mockApplicationBasicInfo);
         when(mockApplicationBasicInfo.getApplicationResourceId()).thenReturn(APPLICATION_ID);
-        when(mockOrganizationUserSharingService.getUserAssociationOfAssociatedUserByOrgId(anyString(), anyString())).thenReturn(null);
     }
 
     @BeforeMethod

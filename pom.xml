@@ -81,12 +81,6 @@
                 <version>${carbon.identity.org.mgt.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wso2.carbon.identity.organization.management</groupId>
-                <artifactId>org.wso2.carbon.identity.organization.management.organization.user.sharing</artifactId>
-                <version>${carbon.identity.org.mgt.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
                 <groupId>org.apache.oltu.oauth2</groupId>
                 <artifactId>org.apache.oltu.oauth2.client</artifactId>
                 <version>${oltu.oauth2.client.version}</version>
@@ -222,7 +216,7 @@
         <org.wso2.identity.organization.mgt.core.imp.pkg.version.range>[1.0.0,2.0.0)
         </org.wso2.identity.organization.mgt.core.imp.pkg.version.range>
 
-        <carbon.identity.org.mgt.version>1.3.93</carbon.identity.org.mgt.version>
+        <carbon.identity.org.mgt.version>1.3.82</carbon.identity.org.mgt.version>
         <org.wso2.identity.organization.mgt.imp.pkg.version.range>[1.0.0,2.0.0)
         </org.wso2.identity.organization.mgt.imp.pkg.version.range>
 
