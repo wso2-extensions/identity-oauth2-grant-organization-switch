@@ -22,7 +22,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
@@ -36,7 +35,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantException;
-import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantServerException;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal.OrganizationSwitchGrantDataHolder;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantUtil;
@@ -47,7 +45,6 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
-import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
@@ -55,8 +52,6 @@ import java.util.Arrays;
 
 import static java.util.Objects.nonNull;
 
-import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_GET_ORGANIZATION_USER_ASSOCIATION_FOR_USER_AT_SHARED_ORG;
-import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT;
 
 /**
@@ -105,14 +100,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                 authenticatedUser.setUserResidentOrganization(authorizedUser.getUserResidentOrganization());
             }
         }
-
-        UserAssociation userAssociation = fetchUserAssociation(authenticatedUser, accessingOrgId);
-        /* After sharing all the admin users to the organizations via an migration, this if check should block switching
-        if user association not exists. */
-        if (userAssociation != null) {
-            authenticatedUser.setUserId(userAssociation.getUserId());
-        }
-
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
@@ -230,7 +217,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     }
 
     private String getAppID(String appName, String tenantDomain) throws IdentityOAuth2Exception {
-
         try {
             ApplicationBasicInfo applicationBasicInfo = getApplicationManagementService().
                     getApplicationBasicInfoByName(appName, tenantDomain);
@@ -241,20 +227,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             }
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while getting application basic info.", e);
-        }
-    }
-
-    private UserAssociation fetchUserAssociation(AuthenticatedUser authenticatedUser, String accessingOrgId)
-            throws OrganizationSwitchGrantServerException {
-
-        try {
-            return OrganizationSwitchGrantDataHolder.getInstance().getOrganizationUserSharingService()
-                    .getUserAssociationOfAssociatedUserByOrgId(authenticatedUser.getUserId(), accessingOrgId);
-        } catch (OrganizationManagementException e) {
-            throw OrganizationSwitchGrantUtil.handleServerException(
-                    ERROR_CODE_ERROR_GET_ORGANIZATION_USER_ASSOCIATION_FOR_USER_AT_SHARED_ORG, e);
-        } catch (UserIdNotFoundException e) {
-            throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ERROR_RETRIEVING_AUTHENTICATED_USER, e);
         }
     }
 }
