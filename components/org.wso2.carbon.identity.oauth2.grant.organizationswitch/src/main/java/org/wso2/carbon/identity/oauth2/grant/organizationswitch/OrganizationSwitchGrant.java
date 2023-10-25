@@ -91,14 +91,17 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId, appId, appName);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
-        // The accessing and resident organization values are not set when switching for root organization.
-        if (!StringUtils.equals(appResideOrgId, accessingOrgId)) {
+        // When accessing the root org, the accessing org is set to null.
+        if (StringUtils.equals(appResideOrgId, accessingOrgId)) {
+            authenticatedUser.setAccessingOrganization(null);
+        } else {
+            // Update the accessing organization.
             authenticatedUser.setAccessingOrganization(accessingOrgId);
-            if (StringUtils.isEmpty(authorizedUser.getUserResidentOrganization())) {
-                authenticatedUser.setUserResidentOrganization(appResideOrgId);
-            } else {
-                authenticatedUser.setUserResidentOrganization(authorizedUser.getUserResidentOrganization());
-            }
+        }
+
+        // Update the user resident organization if not set already.
+        if (StringUtils.isEmpty(authenticatedUser.getUserResidentOrganization())) {
+            authenticatedUser.setUserResidentOrganization(appResideOrgId);
         }
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
@@ -217,6 +220,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     }
 
     private String getAppID(String appName, String tenantDomain) throws IdentityOAuth2Exception {
+
         try {
             ApplicationBasicInfo applicationBasicInfo = getApplicationManagementService().
                     getApplicationBasicInfoByName(appName, tenantDomain);
