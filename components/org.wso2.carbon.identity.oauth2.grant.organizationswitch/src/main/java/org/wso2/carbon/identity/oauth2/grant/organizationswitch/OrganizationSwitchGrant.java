@@ -193,8 +193,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                         "in the same branch.");
             }
             // Organization switching is allowed only for the organizations that have shared the application.
-            if (!OrganizationSwitchGrantConstants.CONSOLE_APP_NAME.equals(appName) &&
-                    !getOrgApplicationManager().isApplicationSharedWithGivenOrganization(appID, currentOrgId,
+            if (!getOrgApplicationManager().isApplicationSharedWithGivenOrganization(appID, currentOrgId,
                             switchOrgId)) {
                 throw new IdentityOAuth2ClientException("Organization switching is not allowed for organizations " +
                         "that have not shared the application");

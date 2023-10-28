@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2022-2023, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -23,11 +23,7 @@ package org.wso2.carbon.identity.oauth2.grant.organizationswitch.util;
  */
 public class OrganizationSwitchGrantConstants {
 
-    public static final String ORGANIZATION_AUTHENTICATOR = "OrganizationAuthenticator";
-
     public static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
-
-    public static final String CONSOLE_APP_NAME = "Console";
 
     /**
      * Constants related to request parameters.
