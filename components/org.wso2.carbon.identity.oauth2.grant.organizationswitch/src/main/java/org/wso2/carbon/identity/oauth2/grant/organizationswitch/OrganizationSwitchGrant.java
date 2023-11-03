@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -111,6 +112,9 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             tokReqMsgCtx.addProperty(TOKEN_BINDING_REFERENCE, tokenDO.getTokenBinding());
         }
 
+        if (OAuthConstants.UserType.APPLICATION.equals(tokenDO.getTokenType())) {
+            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+        }
         if (LOG.isDebugEnabled()) {
             LOG.debug("Issuing an access token for user: " + authenticatedUser + " with scopes: " +
                     Arrays.toString(tokReqMsgCtx.getScope()));
