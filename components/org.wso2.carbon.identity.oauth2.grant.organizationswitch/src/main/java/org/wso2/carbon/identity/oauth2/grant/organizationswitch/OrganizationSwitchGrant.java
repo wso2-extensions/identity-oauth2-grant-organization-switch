@@ -104,6 +104,10 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         if (StringUtils.isEmpty(authenticatedUser.getUserResidentOrganization())) {
             authenticatedUser.setUserResidentOrganization(appResideOrgId);
         }
+        if (appResideOrgId.equals(accessingOrgId) &&
+                appResideOrgId.equals(authenticatedUser.getUserResidentOrganization())) {
+            authenticatedUser.setUserResidentOrganization(null);
+        }
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
