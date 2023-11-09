@@ -22,6 +22,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
@@ -86,10 +87,13 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                         validationResponseDTO.getAuthorizedUser());
 
         String appResideOrgId = getOrganizationIdFromTenantDomain(authorizedUser.getTenantDomain());
-        OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP_PROPERTY);
-        String appName = oAuthAppDO.getApplicationName();
-        String appId = getAppID(appName, authorizedUser.getTenantDomain());
-        checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId, appId, appName);
+
+        if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP_PROPERTY);
+            String appName = oAuthAppDO.getApplicationName();
+            String appId = getAppID(appName, authorizedUser.getTenantDomain());
+            checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId, appId, appName);
+        }
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
         // When accessing the root org, the accessing org is set to null.

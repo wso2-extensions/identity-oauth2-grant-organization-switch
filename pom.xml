@@ -61,6 +61,11 @@
                 <version>${carbon.kernel.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon</groupId>
+                <artifactId>org.wso2.carbon.utils</artifactId>
+                <version>${carbon.kernel.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.application.mgt</artifactId>
                 <version>${carbon.identity.framework.version}</version>
@@ -208,7 +213,7 @@
     <properties>
 
         <!-- Carbon kernel version -->
-        <carbon.kernel.version>4.7.0</carbon.kernel.version>
+        <carbon.kernel.version>4.9.17</carbon.kernel.version>
         <carbon.kernel.package.import.version.range>[4.7.0, 5.0.0)</carbon.kernel.package.import.version.range>
         <carbon.user.api.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.user.api.imp.pkg.version.range>
 
