@@ -22,6 +22,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
@@ -52,7 +53,6 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import java.util.Arrays;
 
 import static java.util.Objects.nonNull;
-
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT;
 
 /**
@@ -203,12 +203,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                 throw new IdentityOAuth2ClientException("Organization switch is only allowed for the organizations " +
                         "in the same branch.");
             }
-            // Organization switching is allowed only for the organizations that have shared the application.
-            if (!OrganizationSwitchGrantConstants.CONSOLE_APP_NAME.equals(appName) &&
-                    !getOrgApplicationManager().isApplicationSharedWithGivenOrganization(appID, currentOrgId,
-                            switchOrgId)) {
-                throw new IdentityOAuth2ClientException("Organization switching is not allowed for organizations " +
-                        "that have not shared the application");
+
+            if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                // Organization switching is allowed only for the organizations that have shared the application.
+                if (!OrganizationSwitchGrantConstants.CONSOLE_APP_NAME.equals(appName) &&
+                        !getOrgApplicationManager().isApplicationSharedWithGivenOrganization(appID, currentOrgId,
+                                switchOrgId)) {
+                    throw new IdentityOAuth2ClientException("Organization switching is not allowed for organizations " +
+                            "that have not shared the application");
+                }
             }
         } catch (OrganizationManagementException e) {
             throw new IdentityOAuth2ServerException("Error while checking organizations allowed to switch.", e);
