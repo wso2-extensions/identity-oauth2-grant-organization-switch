@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -129,6 +130,7 @@ public class OrganizationSwitchGrantTest {
         requestParameters[0] = new RequestParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, SWITCHING_ORG_ID);
         requestParameters[1] = new RequestParameter(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM, ACCESS_TOKEN);
         when(oAuth2AccessTokenReqDTO.getRequestParameters()).thenReturn(requestParameters);
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = false;
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
