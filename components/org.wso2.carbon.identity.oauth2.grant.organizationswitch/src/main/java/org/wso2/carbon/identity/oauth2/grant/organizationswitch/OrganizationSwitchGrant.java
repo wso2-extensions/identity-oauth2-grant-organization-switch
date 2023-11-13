@@ -88,7 +88,12 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         String appResideOrgId = getOrganizationIdFromTenantDomain(authorizedUser.getTenantDomain());
         OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP_PROPERTY);
         String appName = oAuthAppDO.getApplicationName();
-        String appId = getAppID(appName, authorizedUser.getTenantDomain());
+        String appId;
+        if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME && "Console".equalsIgnoreCase(appName)) {
+            appId = oAuthAppDO.getOauthConsumerKey();
+        } else {
+            appId = getAppID(appName, authorizedUser.getTenantDomain());
+        }
         checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId, appId, appName);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
