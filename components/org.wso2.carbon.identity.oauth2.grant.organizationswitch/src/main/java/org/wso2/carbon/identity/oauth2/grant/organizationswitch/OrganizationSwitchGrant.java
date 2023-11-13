@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
 
 import java.util.Arrays;
 
@@ -88,14 +89,13 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         String appResideOrgId = getOrganizationIdFromTenantDomain(authorizedUser.getTenantDomain());
         OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP_PROPERTY);
         String appName = oAuthAppDO.getApplicationName();
-        String appId;
-        if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME && "Console".equalsIgnoreCase(appName)) {
-            appId = oAuthAppDO.getOauthConsumerKey();
-        } else {
-            appId = getAppID(appName, authorizedUser.getTenantDomain());
+        try {
+            // Check whether the organization is allowed to switch.
+            isInSameTree(appResideOrgId, accessingOrgId);
+            isAppShared(appName, appResideOrgId, accessingOrgId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2ServerException("Error while checking organizations allowed to switch.", e);
         }
-        checkOrganizationIsAllowedToSwitch(appResideOrgId, accessingOrgId, appId, appName);
-
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
         // When accessing the root org, the accessing org is set to null.
         if (StringUtils.equals(appResideOrgId, accessingOrgId)) {
@@ -132,6 +132,34 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                     Arrays.toString(tokReqMsgCtx.getScope()));
         }
         return true;
+    }
+
+    private void isInSameTree(String currentOrgId, String switchOrgId) throws IdentityOAuth2ClientException,
+            OrganizationManagementServerException {
+
+        if (StringUtils.equals(currentOrgId, switchOrgId)) {
+            return;
+        }
+        if (getOrganizationManager()
+                .getRelativeDepthBetweenOrganizationsInSameBranch(currentOrgId, switchOrgId) < 0) {
+            throw new IdentityOAuth2ClientException("Organization switch is only allowed for the organizations " +
+                    "in the same branch.");
+        }
+    }
+
+    private void isAppShared(String appName, String currentOrgId, String switchOrgId) throws IdentityOAuth2Exception,
+            OrganizationManagementException {
+
+        if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            String appID = getAppID(appName, currentOrgId);
+            // Organization switching is allowed only for the organizations that have shared the application.
+            if (!OrganizationSwitchGrantConstants.CONSOLE_APP_NAME.equals(appName) &&
+                    !getOrgApplicationManager().isApplicationSharedWithGivenOrganization(appID, currentOrgId,
+                            switchOrgId)) {
+                throw new IdentityOAuth2ClientException("Organization switching is not allowed for organizations " +
+                        "that have not shared the application");
+            }
+        }
     }
 
     @Override
@@ -193,33 +221,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                     .resolveOrganizationId(tenantDomain);
         } catch (OrganizationManagementException e) {
             throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT, e);
-        }
-    }
-
-    private void checkOrganizationIsAllowedToSwitch(String currentOrgId, String switchOrgId, String appID,
-                                                    String appName) throws IdentityOAuth2Exception {
-
-        if (StringUtils.equals(currentOrgId, switchOrgId)) {
-            return;
-        }
-        try {
-            if (getOrganizationManager()
-                    .getRelativeDepthBetweenOrganizationsInSameBranch(currentOrgId, switchOrgId) < 0) {
-                throw new IdentityOAuth2ClientException("Organization switch is only allowed for the organizations " +
-                        "in the same branch.");
-            }
-
-            if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
-                // Organization switching is allowed only for the organizations that have shared the application.
-                if (!OrganizationSwitchGrantConstants.CONSOLE_APP_NAME.equals(appName) &&
-                        !getOrgApplicationManager().isApplicationSharedWithGivenOrganization(appID, currentOrgId,
-                                switchOrgId)) {
-                    throw new IdentityOAuth2ClientException("Organization switching is not allowed for organizations " +
-                            "that have not shared the application");
-                }
-            }
-        } catch (OrganizationManagementException e) {
-            throw new IdentityOAuth2ServerException("Error while checking organizations allowed to switch.", e);
         }
     }
 
