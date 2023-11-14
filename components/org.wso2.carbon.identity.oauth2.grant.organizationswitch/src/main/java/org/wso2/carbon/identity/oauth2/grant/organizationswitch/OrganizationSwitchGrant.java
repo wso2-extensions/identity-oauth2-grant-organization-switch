@@ -261,5 +261,10 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
      */
     protected void validateGrantType(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
 
+        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(accessTokenDO.getGrantType())) {
+            LOG.debug("Access token validation failed.");
+
+            throw new IdentityOAuth2Exception("Invalid grant received.");
+        }
     }
 }
