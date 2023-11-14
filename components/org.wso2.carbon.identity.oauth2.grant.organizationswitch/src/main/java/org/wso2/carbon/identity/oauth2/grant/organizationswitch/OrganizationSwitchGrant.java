@@ -82,6 +82,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         LOG.debug("Access token validation success.");
 
         AccessTokenDO tokenDO = OAuth2Util.findAccessToken(token, false);
+        validateGrantType(tokenDO);
         AuthenticatedUser authorizedUser = nonNull(tokenDO) ? tokenDO.getAuthzUser() :
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
@@ -125,9 +126,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             tokReqMsgCtx.addProperty(TOKEN_BINDING_REFERENCE, tokenDO.getTokenBinding());
         }
 
-        if (OAuthConstants.UserType.APPLICATION.equals(tokenDO.getTokenType())) {
-            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
-        }
         if (LOG.isDebugEnabled()) {
             LOG.debug("Issuing an access token for user: " + authenticatedUser + " with scopes: " +
                     Arrays.toString(tokReqMsgCtx.getScope()));
@@ -254,5 +252,14 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while getting application basic info.", e);
         }
+    }
+
+    /**
+     * Validate grant type of access token.
+     *
+     * @param accessTokenDO access token to be switched
+     */
+    protected void validateGrantType(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+
     }
 }
