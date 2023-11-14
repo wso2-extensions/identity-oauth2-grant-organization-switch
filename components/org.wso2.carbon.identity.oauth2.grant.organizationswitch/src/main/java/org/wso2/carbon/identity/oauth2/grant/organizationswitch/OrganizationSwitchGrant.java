@@ -91,8 +91,9 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         String appName = oAuthAppDO.getApplicationName();
         try {
             // Check whether the organization is allowed to switch.
-            isInSameTree(appResideOrgId, accessingOrgId);
-            isAppShared(appName, appResideOrgId, accessingOrgId);
+            if (isInSameBranch(appResideOrgId, accessingOrgId)) {
+                isAppShared(appName, authorizedUser.getTenantDomain(), appResideOrgId, accessingOrgId);
+            }
         } catch (OrganizationManagementException e) {
             throw new IdentityOAuth2ServerException("Error while checking organizations allowed to switch.", e);
         }
@@ -134,24 +135,25 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         return true;
     }
 
-    private void isInSameTree(String currentOrgId, String switchOrgId) throws IdentityOAuth2ClientException,
+    private boolean isInSameBranch(String currentOrgId, String switchOrgId) throws IdentityOAuth2ClientException,
             OrganizationManagementServerException {
 
         if (StringUtils.equals(currentOrgId, switchOrgId)) {
-            return;
+            return false;
         }
         if (getOrganizationManager()
                 .getRelativeDepthBetweenOrganizationsInSameBranch(currentOrgId, switchOrgId) < 0) {
             throw new IdentityOAuth2ClientException("Organization switch is only allowed for the organizations " +
                     "in the same branch.");
         }
+        return true;
     }
 
-    private void isAppShared(String appName, String currentOrgId, String switchOrgId) throws IdentityOAuth2Exception,
-            OrganizationManagementException {
+    private void isAppShared(String appName, String tenantDomain, String currentOrgId, String switchOrgId)
+            throws IdentityOAuth2Exception, OrganizationManagementException {
 
         if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
-            String appID = getAppID(appName, currentOrgId);
+            String appID = getAppID(appName, tenantDomain);
             // Organization switching is allowed only for the organizations that have shared the application.
             if (!OrganizationSwitchGrantConstants.CONSOLE_APP_NAME.equals(appName) &&
                     !getOrgApplicationManager().isApplicationSharedWithGivenOrganization(appID, currentOrgId,
