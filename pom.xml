@@ -233,7 +233,7 @@
         <carbon.identity.framework.version>5.25.390</carbon.identity.framework.version>
         <carbon.identity.package.import.version.range>[5.20.0, 7.0.0)
         </carbon.identity.package.import.version.range>
-        <identity.inbound.auth.oauth.version>6.11.195-SNAPSHOT</identity.inbound.auth.oauth.version>
+        <identity.inbound.auth.oauth.version>6.11.196</identity.inbound.auth.oauth.version>
         <identity.inbound.auth.oauth.import.version.range>[6.7.116, 6.8.0)
         </identity.inbound.auth.oauth.import.version.range>
 
