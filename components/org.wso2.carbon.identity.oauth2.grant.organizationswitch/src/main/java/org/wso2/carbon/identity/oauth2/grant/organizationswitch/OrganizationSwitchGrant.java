@@ -263,10 +263,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
      */
     private void changeUserTypeForCCGrant(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO accessTokenDO) {
 
-        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(accessTokenDO.getGrantType()) ||
-                (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(accessTokenDO.getGrantType()) &&
-                        OAuthConstants.UserType.APPLICATION.equals(tokReqMsgCtx.getProperty(
-                                tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE).toString())))) {
+        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(accessTokenDO.getGrantType())) {
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
         }
     }
