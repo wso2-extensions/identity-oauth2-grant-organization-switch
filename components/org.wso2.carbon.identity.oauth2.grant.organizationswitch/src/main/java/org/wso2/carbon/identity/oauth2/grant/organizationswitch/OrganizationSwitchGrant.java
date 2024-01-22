@@ -53,8 +53,9 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 
 import java.util.Arrays;
 
-import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT;
+
+import static java.util.Objects.nonNull;
 
 /**
  * Implements the AuthorizationGrantHandler for the OrganizationSwitch grant type.
@@ -82,7 +83,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         LOG.debug("Access token validation success.");
 
         AccessTokenDO tokenDO = OAuth2Util.findAccessToken(token, false);
-        validateGrantType(tokenDO);
+        changeUserTypeForCCGrant(tokReqMsgCtx, tokenDO);
         AuthenticatedUser authorizedUser = nonNull(tokenDO) ? tokenDO.getAuthzUser() :
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
@@ -255,16 +256,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     * Validate grant type of access token.
+     * Change user type for tokens switched with client credentials grant as APPLICATION.
      *
+     * @param tokReqMsgCtx  token request message context
      * @param accessTokenDO access token to be switched
      */
-    protected void validateGrantType(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+    private void changeUserTypeForCCGrant(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO accessTokenDO) {
 
         if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(accessTokenDO.getGrantType())) {
-            LOG.debug("Access token validation failed.");
-
-            throw new IdentityOAuth2Exception("Invalid grant received.");
+            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
         }
     }
 }
