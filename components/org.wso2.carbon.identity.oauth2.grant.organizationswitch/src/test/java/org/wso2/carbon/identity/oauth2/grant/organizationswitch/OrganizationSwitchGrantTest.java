@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -50,11 +51,15 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.util.ArrayList;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
@@ -85,38 +90,55 @@ public class OrganizationSwitchGrantTest {
     private OrganizationSwitchGrant organizationSwitchGrant;
     private AccessTokenDO mockAccessTokenDO;
     private AuthenticatedUser mockAuthenticatedUser;
+    private TenantManager mockTenantManager;
+    private RealmService mockRealmService;
     private MockedStatic<OAuth2Util> mockedOAuth2Util;
     private MockedStatic<Utils> mockOrgUtil;
+    private MockedStatic<IdentityTenantUtil> mockIdentityTenantUtil;
 
     @BeforeClass
-    public void setup() throws IdentityApplicationManagementException {
+    public void setup() throws Exception {
 
         mockAccessTokenDO = mock(AccessTokenDO.class);
         mockAuthenticatedUser = mock(AuthenticatedUser.class);
         mockedOAuth2Util = Mockito.mockStatic(OAuth2Util.class);
         mockOrgUtil = Mockito.mockStatic(Utils.class);
-        mockedOAuth2Util.when(() -> OAuth2Util.findAccessToken(nullable(String.class), anyBoolean())).thenReturn(mockAccessTokenDO);
+        mockIdentityTenantUtil = Mockito.mockStatic(IdentityTenantUtil.class);
+        mockedOAuth2Util.when(() -> OAuth2Util.findAccessToken(nullable(String.class), anyBoolean()))
+                .thenReturn(mockAccessTokenDO);
         mockOrgUtil.when(Utils::getSubOrgStartLevel).thenReturn(2);
+        mockIdentityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(nullable(String.class))).thenReturn(1);
 
         mockOAuth2TokenValidationService = mock(OAuth2TokenValidationService.class);
         mockOAuth2ClientApplicationDTO = mock(OAuth2ClientApplicationDTO.class);
         mockOAuthAppDO = mock(OAuthAppDO.class);
         mockOAuth2TokenValidationResponseDTO = mock(OAuth2TokenValidationResponseDTO.class);
-        OrganizationSwitchGrantDataHolder.getInstance().setOAuth2TokenValidationService(mockOAuth2TokenValidationService);
-        when(mockOAuth2TokenValidationService.findOAuthConsumerIfTokenIsValid(any())).thenReturn(mockOAuth2ClientApplicationDTO);
-        when(mockOAuth2ClientApplicationDTO.getAccessTokenValidationResponse()).thenReturn(mockOAuth2TokenValidationResponseDTO);
+        OrganizationSwitchGrantDataHolder.getInstance()
+                .setOAuth2TokenValidationService(mockOAuth2TokenValidationService);
+        when(mockOAuth2TokenValidationService.findOAuthConsumerIfTokenIsValid(any())).thenReturn(
+                mockOAuth2ClientApplicationDTO);
+        when(mockOAuth2ClientApplicationDTO.getAccessTokenValidationResponse()).thenReturn(
+                mockOAuth2TokenValidationResponseDTO);
 
         mockOrganizationManager = mock(OrganizationManager.class);
         OrganizationSwitchGrantDataHolder.getInstance().setOrganizationManager(mockOrganizationManager);
         mockOrgApplicationManager = mock(OrgApplicationManager.class);
         OrganizationSwitchGrantDataHolder.getInstance().setOrgApplicationManager(mockOrgApplicationManager);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
-        OrganizationSwitchGrantDataHolder.getInstance().setApplicationManagementService(mockApplicationManagementService);
+        OrganizationSwitchGrantDataHolder.getInstance()
+                .setApplicationManagementService(mockApplicationManagementService);
 
         mockApplicationBasicInfo = mock(ApplicationBasicInfo.class);
         when(mockOAuthAppDO.getApplicationName()).thenReturn(APPLICATION_NAME);
-        when(mockApplicationManagementService.getApplicationBasicInfoByName(anyString(),anyString())).thenReturn(mockApplicationBasicInfo);
+        when(mockApplicationManagementService.getApplicationBasicInfoByName(anyString(), anyString())).thenReturn(
+                mockApplicationBasicInfo);
         when(mockApplicationBasicInfo.getApplicationResourceId()).thenReturn(APPLICATION_ID);
+
+        mockRealmService = mock(RealmService.class);
+        mockTenantManager = mock(TenantManager.class);
+        OrganizationSwitchGrantDataHolder.getInstance().setRealmService(mockRealmService);
+        when(mockRealmService.getTenantManager()).thenReturn(mockTenantManager);
+        when(mockTenantManager.isTenantActive(anyInt())).thenReturn(true);
     }
 
     @BeforeMethod
@@ -146,7 +168,22 @@ public class OrganizationSwitchGrantTest {
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
         when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
-        when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(-1);
+        when(mockOrganizationManager.resolveOrganizationId(SWITCHING_ORG_ID)).thenReturn(SWITCHING_ORG_TENANT_DOMAIN);
+        when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID,
+                SWITCHING_ORG_ID)).thenReturn(-1);
+        organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2ClientException.class)
+    public void testWhenSwitchingOrgIsInactive()
+            throws OrganizationManagementException, IdentityOAuth2Exception, UserStoreException {
+
+        when(mockOAuth2TokenValidationResponseDTO.isValid()).thenReturn(true);
+        when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
+        when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
+        when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
+        when(mockOrganizationManager.resolveOrganizationId(SWITCHING_ORG_ID)).thenReturn(SWITCHING_ORG_TENANT_DOMAIN);
+        when(mockTenantManager.isTenantActive(anyInt())).thenReturn(false);
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
     }
 
@@ -158,6 +195,7 @@ public class OrganizationSwitchGrantTest {
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
         when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
+        when(mockOrganizationManager.resolveOrganizationId(SWITCHING_ORG_ID)).thenReturn(SWITCHING_ORG_TENANT_DOMAIN);
         when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(1);
         when(mockAuthenticatedUser.getUserId()).thenReturn("12345");
         when(mockOrgApplicationManager.isApplicationSharedWithGivenOrganization(anyString(),anyString(),anyString())).
@@ -183,6 +221,7 @@ public class OrganizationSwitchGrantTest {
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
         when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
+        when(mockOrganizationManager.resolveOrganizationId(SWITCHING_ORG_ID)).thenReturn(SWITCHING_ORG_TENANT_DOMAIN);
         when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(-1);
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
     }
@@ -195,6 +234,7 @@ public class OrganizationSwitchGrantTest {
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
         when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
+        when(mockOrganizationManager.resolveOrganizationId(SWITCHING_ORG_ID)).thenReturn(SWITCHING_ORG_TENANT_DOMAIN);
         when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(1);
         when(mockOrgApplicationManager.isApplicationSharedWithGivenOrganization(anyString(),anyString(),anyString())).
                 thenReturn(false);
@@ -211,6 +251,7 @@ public class OrganizationSwitchGrantTest {
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
         when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
+        when(mockOrganizationManager.resolveOrganizationId(SWITCHING_ORG_ID)).thenReturn(SWITCHING_ORG_TENANT_DOMAIN);
         when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(2);
         when(mockAuthenticatedUser.getUserId()).thenReturn("12345");
         when(mockAccessTokenDO.getTokenBinding()).thenReturn(tokenBinding);
