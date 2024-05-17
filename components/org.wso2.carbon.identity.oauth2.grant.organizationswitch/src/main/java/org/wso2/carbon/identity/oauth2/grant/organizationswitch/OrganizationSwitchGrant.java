@@ -78,7 +78,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
         String token = extractParameter(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM, tokReqMsgCtx);
         String accessingOrgId = extractParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, tokReqMsgCtx);
-        boolean isActiveOrg = isOrganizationActive(accessingOrgId);
+        boolean isActiveOrg = isActiveOrganization(accessingOrgId);
         if (!isActiveOrg) {
             throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                     "The switching organization is in deactivated state.");
@@ -144,15 +144,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         return true;
     }
 
-    private boolean isOrganizationActive(String organizationId) throws IdentityOAuth2Exception {
+    private boolean isActiveOrganization(String organizationId) throws IdentityOAuth2Exception {
 
-        String tenantDomainOfAccessingOrg = getTenantDomainFromOrgId(organizationId);
+        String tenantDomain = getTenantDomainFromOrgId(organizationId);
         TenantManager tenantManager =
                 OrganizationSwitchGrantDataHolder.getInstance().getRealmService().getTenantManager();
         try {
-            return tenantManager.isTenantActive(IdentityTenantUtil.getTenantId(tenantDomainOfAccessingOrg));
+            return tenantManager.isTenantActive(IdentityTenantUtil.getTenantId(tenantDomain));
         } catch (UserStoreException e) {
-            throw new IdentityOAuth2Exception("Error while validating whether switching organization is active.", e);
+            throw new IdentityOAuth2Exception("Error while validating whether the organization is active.", e);
         }
     }
 
