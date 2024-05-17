@@ -27,6 +27,8 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
@@ -50,9 +52,12 @@ import org.wso2.carbon.identity.organization.management.application.OrgApplicati
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.util.Arrays;
 
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT;
 
 import static java.util.Objects.nonNull;
@@ -73,6 +78,11 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
         String token = extractParameter(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM, tokReqMsgCtx);
         String accessingOrgId = extractParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, tokReqMsgCtx);
+        boolean isActiveOrg = isActiveOrganization(accessingOrgId);
+        if (!isActiveOrg) {
+            throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "The switching organization is in deactivated state.");
+        }
         OAuth2TokenValidationResponseDTO validationResponseDTO = validateToken(token);
         if (!validationResponseDTO.isValid()) {
             LOG.debug("Access token validation failed.");
@@ -132,6 +142,26 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                     Arrays.toString(tokReqMsgCtx.getScope()));
         }
         return true;
+    }
+
+    private boolean isActiveOrganization(String organizationId) throws IdentityOAuth2Exception {
+
+        try {
+            boolean organizationExistById = OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager()
+                    .isOrganizationExistById(organizationId);
+            if (!organizationExistById) {
+                throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Invalid organization id: " + organizationId);
+            }
+            String tenantDomain = getTenantDomainFromOrgId(organizationId);
+            TenantManager tenantManager =
+                    OrganizationSwitchGrantDataHolder.getInstance().getRealmService().getTenantManager();
+            return tenantManager.isTenantActive(IdentityTenantUtil.getTenantId(tenantDomain));
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while checking organization exist with ID: " + organizationId , e);
+        } catch (UserStoreException e) {
+            throw new IdentityOAuth2Exception("Error while validating whether the organization is active.", e);
+        }
     }
 
     private boolean isInSameBranch(String currentOrgId, String switchOrgId) throws IdentityOAuth2ClientException,
@@ -222,6 +252,17 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                     .resolveOrganizationId(tenantDomain);
         } catch (OrganizationManagementException e) {
             throw OrganizationSwitchGrantUtil.handleServerException(ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT, e);
+        }
+    }
+
+    private String getTenantDomainFromOrgId(String organizationId) throws OrganizationSwitchGrantException {
+
+        try {
+            return OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw OrganizationSwitchGrantUtil.handleServerException(
+                    ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN, e);
         }
     }
 

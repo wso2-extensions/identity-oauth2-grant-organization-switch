@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.organization.management.application.OrgApplicati
 import org.wso2.carbon.identity.organization.management.application.internal.OrgApplicationMgtDataHolder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
+import org.wso2.carbon.user.core.service.RealmService;
 
 /**
  * This class contains the service component of the organization switching grant type.
@@ -163,5 +164,23 @@ public class OrganizationSwitchGrantServiceComponent {
     protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
         OrganizationSwitchGrantDataHolder.getInstance().setApplicationManagementService(null);
+    }
+
+    @Reference(
+            name = "realm.service",
+            service = RealmService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRealmService")
+    protected void setRealmService(RealmService realmService) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setRealmService(realmService);
+        LOG.debug("Realm service set in OrganizationSwitchGrantDataHolder.");
+    }
+
+    protected void unsetRealmService(RealmService realmService) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setRealmService(null);
+        LOG.debug("Realm service unset in OrganizationSwitchGrantDataHolder.");
     }
 }

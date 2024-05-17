@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
+import org.wso2.carbon.user.core.service.RealmService;
 
 /**
  * Organization switch grant data holder.
@@ -36,6 +37,7 @@ public class OrganizationSwitchGrantDataHolder {
     private OrganizationManager organizationManager;
     private OrgApplicationManager orgApplicationManager;
     private ApplicationManagementService applicationManagementService;
+    private RealmService realmService;
 
     public static OrganizationSwitchGrantDataHolder getInstance() {
 
@@ -131,5 +133,25 @@ public class OrganizationSwitchGrantDataHolder {
     public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
         this.applicationManagementService = applicationManagementService;
+    }
+
+    /**
+     * Get {@link RealmService}.
+     *
+     * @return Realm service {@link RealmService}.
+     */
+    public RealmService getRealmService() {
+
+        return realmService;
+    }
+
+    /**
+     * Set {@link RealmService}.
+     *
+     * @param realmService Instance of {@link RealmService}.
+     */
+    public void setRealmService(RealmService realmService) {
+
+        this.realmService = realmService;
     }
 }
