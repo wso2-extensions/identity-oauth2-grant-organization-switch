@@ -122,6 +122,8 @@ public class OrganizationSwitchGrantTest {
 
         mockOrganizationManager = mock(OrganizationManager.class);
         OrganizationSwitchGrantDataHolder.getInstance().setOrganizationManager(mockOrganizationManager);
+        when(mockOrganizationManager.isOrganizationExistById(anyString())).thenReturn(true);
+
         mockOrgApplicationManager = mock(OrgApplicationManager.class);
         OrganizationSwitchGrantDataHolder.getInstance().setOrgApplicationManager(mockOrgApplicationManager);
         mockApplicationManagementService = mock(ApplicationManagementService.class);

@@ -146,11 +146,19 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
 
     private boolean isActiveOrganization(String organizationId) throws IdentityOAuth2Exception {
 
-        String tenantDomain = getTenantDomainFromOrgId(organizationId);
-        TenantManager tenantManager =
-                OrganizationSwitchGrantDataHolder.getInstance().getRealmService().getTenantManager();
         try {
+            boolean organizationExistById = OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager()
+                    .isOrganizationExistById(organizationId);
+            if (!organizationExistById) {
+                throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Invalid organization id: " + organizationId);
+            }
+            String tenantDomain = getTenantDomainFromOrgId(organizationId);
+            TenantManager tenantManager =
+                    OrganizationSwitchGrantDataHolder.getInstance().getRealmService().getTenantManager();
             return tenantManager.isTenantActive(IdentityTenantUtil.getTenantId(tenantDomain));
+        } catch (OrganizationManagementException e) {
+            throw new RuntimeException(e);
         } catch (UserStoreException e) {
             throw new IdentityOAuth2Exception("Error while validating whether the organization is active.", e);
         }
