@@ -158,7 +158,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                     OrganizationSwitchGrantDataHolder.getInstance().getRealmService().getTenantManager();
             return tenantManager.isTenantActive(IdentityTenantUtil.getTenantId(tenantDomain));
         } catch (OrganizationManagementException e) {
-            throw new RuntimeException(e);
+            throw new IdentityOAuth2Exception("Error while checking organization exist with ID: " + organizationId , e);
         } catch (UserStoreException e) {
             throw new IdentityOAuth2Exception("Error while validating whether the organization is active.", e);
         }
