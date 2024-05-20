@@ -141,6 +141,8 @@ public class OrganizationSwitchGrantTest {
         OrganizationSwitchGrantDataHolder.getInstance().setRealmService(mockRealmService);
         when(mockRealmService.getTenantManager()).thenReturn(mockTenantManager);
         when(mockTenantManager.isTenantActive(anyInt())).thenReturn(true);
+        when(mockAccessTokenDO.getTokenType()).thenReturn("APPLICATION_USER");
+
     }
 
     @BeforeMethod
