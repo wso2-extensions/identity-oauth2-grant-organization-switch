@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2022-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -93,7 +93,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         LOG.debug("Access token validation success.");
 
         AccessTokenDO tokenDO = OAuth2Util.findAccessToken(token, false);
-        changeUserTypeForCCGrant(tokReqMsgCtx, tokenDO);
         AuthenticatedUser authorizedUser = nonNull(tokenDO) ? tokenDO.getAuthzUser() :
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
@@ -132,16 +131,33 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
+        if (OAuthConstants.UserType.APPLICATION.equals(tokenDO.getTokenType())) {
+            allowedScopes = (String[]) ArrayUtils.removeElement(allowedScopes, OAuthConstants.Scope.OPENID);
+        }
         tokReqMsgCtx.setScope(allowedScopes);
         if (tokenDO.getTokenBinding() != null) {
             tokReqMsgCtx.addProperty(TOKEN_BINDING_REFERENCE, tokenDO.getTokenBinding());
         }
 
+        tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, tokenDO.getTokenType());
         if (LOG.isDebugEnabled()) {
             LOG.debug("Issuing an access token for user: " + authenticatedUser + " with scopes: " +
                     Arrays.toString(tokReqMsgCtx.getScope()));
         }
         return true;
+    }
+
+    @Override
+    public boolean issueRefreshToken(String tokenType) throws IdentityOAuth2Exception {
+
+        return super.issueRefreshToken() && OAuthConstants.UserType.APPLICATION_USER.equals(tokenType);
+    }
+
+    @Override
+    public boolean isOfTypeApplicationUser(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        return OAuthConstants.UserType.APPLICATION_USER
+                .equals(tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE));
     }
 
     private boolean isActiveOrganization(String organizationId) throws IdentityOAuth2Exception {
@@ -293,19 +309,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             }
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while getting application basic info.", e);
-        }
-    }
-
-    /**
-     * Change user type for tokens switched with client credentials grant as APPLICATION.
-     *
-     * @param tokReqMsgCtx  token request message context
-     * @param accessTokenDO access token to be switched
-     */
-    private void changeUserTypeForCCGrant(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO accessTokenDO) {
-
-        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(accessTokenDO.getGrantType())) {
-            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
         }
     }
 }
