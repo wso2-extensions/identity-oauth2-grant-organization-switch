@@ -18,8 +18,13 @@
 
 package org.wso2.carbon.identity.oauth2.grant.organizationswitch.util;
 
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.oauth2.grant.organizationswitch.exception.OrganizationSwitchGrantServerException;
 import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
+
+import java.text.ParseException;
 
 /**
  * This class provides utility functions for the Organization Switch grant.
@@ -30,5 +35,45 @@ public class OrganizationSwitchGrantUtil {
             OrganizationManagementConstants.ErrorMessages error, Throwable e) {
 
         return new OrganizationSwitchGrantServerException(error.getMessage(), error.getCode(), e);
+    }
+
+    /**
+     * Get the SignedJWT by parsing the subjectToken.
+     *
+     * @param subjectToken Token sent in the request
+     * @return SignedJWT
+     */
+    public static SignedJWT getSignedJWT(String subjectToken)  {
+
+        SignedJWT signedJWT;
+        if (StringUtils.isEmpty(subjectToken)) {
+            return null;
+        }
+        try {
+            signedJWT = SignedJWT.parse(subjectToken);
+        } catch (ParseException e) {
+            return null;
+        }
+        return signedJWT;
+    }
+
+    /**
+     * Retrieve the JWTClaimsSet from the SignedJWT.
+     *
+     * @param signedJWT SignedJWT object
+     * @return JWTClaimsSet
+     */
+    public static JWTClaimsSet getClaimSet(SignedJWT signedJWT) {
+
+        JWTClaimsSet claimsSet;
+        try {
+            claimsSet = signedJWT.getJWTClaimsSet();
+            if (claimsSet == null) {
+                return null;
+            }
+        } catch (ParseException e) {
+            return null;
+        }
+        return claimsSet;
     }
 }
