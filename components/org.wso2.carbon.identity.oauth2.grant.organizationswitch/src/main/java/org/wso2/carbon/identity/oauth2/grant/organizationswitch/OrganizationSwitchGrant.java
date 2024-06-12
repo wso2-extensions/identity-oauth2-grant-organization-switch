@@ -102,7 +102,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         LOG.debug("Access token validation success.");
 
         AccessTokenDO tokenDO = OAuth2Util.findAccessToken(token, false);
-        changeUserTypeForCCGrant(tokReqMsgCtx, tokenDO);
         if (isImpersonationFlow(token, tokReqMsgCtx)) {
             tokReqMsgCtx.setImpersonationRequest(true);
         }
@@ -322,19 +321,6 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             }
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while getting application basic info.", e);
-        }
-    }
-
-    /**
-     * Change user type for tokens switched with client credentials grant as APPLICATION.
-     *
-     * @param tokReqMsgCtx  token request message context
-     * @param accessTokenDO access token to be switched
-     */
-    private void changeUserTypeForCCGrant(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO accessTokenDO) {
-
-        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(accessTokenDO.getGrantType())) {
-            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
         }
     }
 
