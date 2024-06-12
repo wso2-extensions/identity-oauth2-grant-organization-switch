@@ -96,6 +96,11 @@
                 <version>${oltu.oauth2.client.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.orbit.com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+                <version>${nimbusds.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.extension.identity.oauth2.grantType.organizationswitch</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth2.grant.organizationswitch</artifactId>
                 <version>${project.version}</version>
@@ -233,9 +238,12 @@
         <carbon.identity.framework.version>5.25.390</carbon.identity.framework.version>
         <carbon.identity.package.import.version.range>[5.20.0, 8.0.0)
         </carbon.identity.package.import.version.range>
-        <identity.inbound.auth.oauth.version>7.0.78</identity.inbound.auth.oauth.version>
+        <identity.inbound.auth.oauth.version>7.0.97</identity.inbound.auth.oauth.version>
         <identity.inbound.auth.oauth.import.version.range>[6.7.116, 8.0.0)
         </identity.inbound.auth.oauth.import.version.range>
+
+        <nimbusds.osgi.version.range>[7.3.0,8.0.0)</nimbusds.osgi.version.range>
+        <nimbusds.version>7.3.0.wso2v1</nimbusds.version>
 
         <org.apache.commons.lang.imp.pkg.version.range>[2.6,3)</org.apache.commons.lang.imp.pkg.version.range>
         <org.apache.commons.logging.imp.pkg.version.range>[1.2,2)</org.apache.commons.logging.imp.pkg.version.range>

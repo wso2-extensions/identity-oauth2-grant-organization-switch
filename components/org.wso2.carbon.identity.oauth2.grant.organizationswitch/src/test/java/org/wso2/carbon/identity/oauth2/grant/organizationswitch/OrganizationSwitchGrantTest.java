@@ -18,8 +18,16 @@
 
 package org.wso2.carbon.identity.oauth2.grant.organizationswitch;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -32,6 +40,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -55,7 +64,14 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPrivateKey;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -64,6 +80,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.IMPERSONATED_SUBJECT;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.TOKEN_BINDING_REFERENCE;
 
 @WithCarbonHome
@@ -77,6 +95,9 @@ public class OrganizationSwitchGrantTest {
     private static final String APPLICATION_NAME = "B2B-APP";
     private static final String APPLICATION_ID = "123456";
     private static final String ACCESS_TOKEN = "a8fb49be-5a28-30bd-98ea-dad7b87d5d86";
+    private static final String IMPERSONATOR_ID = "8122e3de-0f3b-4b0e-a43a-d0c237451b7a";
+    private static final String IMPERSONATED_SUBJECT_ID ="d9982d93-4e73-4565-b7ac-3605e8d05f80";
+
     private OAuth2TokenValidationService mockOAuth2TokenValidationService;
     private OrganizationManager mockOrganizationManager;
     private OrgApplicationManager mockOrgApplicationManager;
@@ -265,5 +286,56 @@ public class OrganizationSwitchGrantTest {
         assert MOCK_TOKEN_BINDING_REFERENCE.equals(
                 ((TokenBinding) oAuthTokenReqMessageContext.getProperty(
                         TOKEN_BINDING_REFERENCE)).getBindingReference());
+    }
+
+    @Test
+    public void testImpersonationAccessTokenSwitch() throws IdentityOAuth2Exception, OrganizationManagementException,
+            NoSuchAlgorithmException, JOSEException {
+
+        when(mockOAuth2TokenValidationResponseDTO.isValid()).thenReturn(true);
+        when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
+        when(mockAuthenticatedUser.getTenantDomain()).thenReturn(TOKEN_ISSUED_TENANT_DOMAIN);
+        when(mockOrganizationManager.resolveOrganizationId(TOKEN_ISSUED_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
+        when(mockOrganizationManager.getRelativeDepthBetweenOrganizationsInSameBranch(TOKEN_ISSUED_ORG_ID, SWITCHING_ORG_ID)).thenReturn(1);
+        when(mockOrgApplicationManager.isApplicationSharedWithGivenOrganization(anyString(),anyString(),anyString())).
+                thenReturn(true);
+        when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("carbon.super");
+        mockedOAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer("carbon.super"))
+                .thenReturn("https://localhost:9443/oauth2/token");
+
+
+        RequestParameter[] requestParameters = new RequestParameter[2];
+        requestParameters[0] = new RequestParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, SWITCHING_ORG_ID);
+        requestParameters[1] = new RequestParameter(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM,
+                getImpersonatedAccessToken().serialize());
+        when(oAuth2AccessTokenReqDTO.getRequestParameters()).thenReturn(requestParameters);
+        Assert.assertTrue(organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext));
+        Assert.assertNotNull(oAuthTokenReqMessageContext.getProperty(IMPERSONATING_ACTOR), IMPERSONATOR_ID);
+        Assert.assertNotNull(oAuthTokenReqMessageContext.getProperty(IMPERSONATED_SUBJECT), IMPERSONATED_SUBJECT_ID);
+    }
+
+    private SignedJWT getImpersonatedAccessToken() throws NoSuchAlgorithmException, JOSEException {
+
+        KeyPairGenerator keyGenerator = KeyPairGenerator.getInstance("RSA");
+        KeyPair keyPair = keyGenerator.generateKeyPair();
+        RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
+        JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.RS256).keyID("KID").build();
+        Instant currentTime = Instant.now();
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                .audience("7N7vQHZbJtPnzegtGXJvvwDL4wca")
+                .issuer("https://localhost:9443/oauth2/token")
+                .subject(IMPERSONATED_SUBJECT_ID)
+                .issueTime(Date.from(currentTime))
+                .expirationTime(Date.from(Instant.ofEpochSecond(currentTime.getEpochSecond() + 36000)))
+                .claim("scope", "default")
+                .claim("aut", "APPLICATION_USER")
+                .claim("azp", "7N7vQHZbJtPnzegtGXJvvwDL4wca")
+                .claim("act", Collections.singletonMap("sub", IMPERSONATOR_ID))
+                .notBeforeTime(Date.from(currentTime))
+                .build();
+        JWSSigner signer = new RSASSASigner(privateKey);
+        SignedJWT signedJwt = new SignedJWT(jwsHeader, claims);
+        signedJwt.sign(signer);
+        return signedJwt;
     }
 }

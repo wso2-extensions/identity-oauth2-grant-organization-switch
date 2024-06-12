@@ -28,6 +28,10 @@ public class OrganizationSwitchGrantConstants {
     public static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
 
     public static final String CONSOLE_APP_NAME = "Console";
+    public static final String IMPERSONATED_SUBJECT = "IMPERSONATED_SUBJECT";
+    public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
+    public static final String ACT = "act";
+    public static final String SUB = "sub";
 
     /**
      * Constants related to request parameters.

@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.grant.organizationswitch;
 
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -56,8 +58,15 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.util.Arrays;
+import java.util.Map;
 
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ACT;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.IMPERSONATED_SUBJECT;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.IMPERSONATING_ACTOR;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.SUB;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantUtil.getClaimSet;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantUtil.getSignedJWT;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT;
 
 import static java.util.Objects.nonNull;
@@ -93,6 +102,9 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         LOG.debug("Access token validation success.");
 
         AccessTokenDO tokenDO = OAuth2Util.findAccessToken(token, false);
+        if (isImpersonationFlow(token, tokReqMsgCtx)) {
+            tokReqMsgCtx.setImpersonationRequest(true);
+        }
         AuthenticatedUser authorizedUser = nonNull(tokenDO) ? tokenDO.getAuthzUser() :
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
@@ -310,5 +322,65 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while getting application basic info.", e);
         }
+    }
+
+    /**
+     * Validates the subject token provided in the token exchange request.
+     * Checks if the subject token is signed by the Authorization Server (AS),
+     * validates the token claims, and ensures it's intended for the correct audience and issuer.
+     *
+     * @return true if the subject token is valid, false otherwise.
+     */
+    private boolean isImpersonationFlow(String token, OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        // Retrieve the signed JWT object from the request parameters
+        SignedJWT signedJWT = getSignedJWT(token);
+        if (signedJWT == null) {
+            return false;
+        }
+
+        // Extract claims from the JWT
+        JWTClaimsSet claimsSet = getClaimSet(signedJWT);
+        if (claimsSet == null) {
+            return false;
+        }
+
+        // Validate mandatory claims
+        String subject = resolveSubject(claimsSet);
+        String impersonator = resolveImpersonator(claimsSet);
+        if (StringUtils.isBlank(impersonator) ||StringUtils.isBlank(subject) ) {
+            return false;
+        }
+
+        String jwtIssuer = claimsSet.getIssuer();
+        if (!validateTokenIssuer(jwtIssuer, tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain())) {
+            return false;
+        }
+
+        tokReqMsgCtx.addProperty(IMPERSONATING_ACTOR, impersonator);
+        tokReqMsgCtx.addProperty(IMPERSONATED_SUBJECT, subject);
+        return true;
+    }
+
+    private boolean validateTokenIssuer(String jwtIssuer, String tenantDomain) throws IdentityOAuth2Exception {
+
+        String expectedIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain);
+        return StringUtils.equals(expectedIssuer, jwtIssuer);
+    }
+
+    private String resolveSubject(JWTClaimsSet claimsSet) {
+
+        return claimsSet.getSubject();
+    }
+
+    private String resolveImpersonator(JWTClaimsSet claimsSet) {
+
+        if (claimsSet.getClaim(ACT) != null) {
+
+            Map<String, String> mayActClaimSet = (Map) claimsSet.getClaim(ACT);
+            return mayActClaimSet.get(SUB);
+        }
+        return null;
     }
 }
