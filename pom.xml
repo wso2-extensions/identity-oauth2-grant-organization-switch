@@ -123,6 +123,12 @@
                 <version>${org.mockito.version}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>org.jacoco</groupId>
+                <artifactId>org.jacoco.agent</artifactId>
+                <classifier>runtime</classifier>
+                <version>${jacoco.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -264,5 +270,7 @@
         <testng.version>6.9.10</testng.version>
         <maven.surefire.plugin.version>2.22.0</maven.surefire.plugin.version>
         <powermock.version>2.0.2</powermock.version>
+
+        <jacoco.version>0.8.6</jacoco.version>
     </properties>
 </project>
