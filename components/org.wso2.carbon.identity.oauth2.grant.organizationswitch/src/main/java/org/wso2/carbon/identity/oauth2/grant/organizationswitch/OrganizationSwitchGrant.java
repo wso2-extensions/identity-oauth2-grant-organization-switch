@@ -25,11 +25,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -54,7 +56,10 @@ import org.wso2.carbon.identity.organization.management.application.OrgApplicati
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
+import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.util.Arrays;
@@ -79,6 +84,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
     private static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
     private static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
+    public static final String ORG_USER_INVITATION_USER_DOMAIN = "OrganizationUserInvitation.PrimaryUserDomain";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -140,6 +146,11 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                 appResideOrgId.equals(authenticatedUser.getUserResidentOrganization())) {
             authenticatedUser.setUserResidentOrganization(null);
         }
+
+        /* The shared user's domain can be different from the original user's domain. Hence, resolve the correct user
+        store domain. */
+        resolveUserStoreDomain(authenticatedUser, accessingOrgId);
+
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
@@ -382,5 +393,31 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             return mayActClaimSet.get(SUB);
         }
         return null;
+    }
+
+    private void resolveUserStoreDomain(AuthenticatedUser authenticatedUser, String organizationId)
+            throws IdentityOAuth2Exception {
+
+        String userStoreDomain = IdentityUtil.getProperty(ORG_USER_INVITATION_USER_DOMAIN);
+        if (StringUtils.equals(authenticatedUser.getUserResidentOrganization(), organizationId)) {
+            try {
+                String tenantDomain = OrganizationSwitchGrantDataHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(organizationId);
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                userStoreDomain = getAbstractUserStoreManager(tenantId).getUser(authenticatedUser.getUserId(),
+                        null).getUserStoreDomain();
+
+            } catch (OrganizationManagementException | UserStoreException | UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception("Error while resolving user store domain of authenticated user.", e);
+            }
+        }
+        authenticatedUser.setUserStoreDomain(userStoreDomain);
+    }
+
+    private AbstractUserStoreManager getAbstractUserStoreManager(int tenantId) throws UserStoreException {
+
+        RealmService realmService = OrganizationSwitchGrantDataHolder.getInstance().getRealmService();
+        UserRealm tenantUserRealm = realmService.getTenantUserRealm(tenantId);
+        return (AbstractUserStoreManager) tenantUserRealm.getUserStoreManager();
     }
 }
