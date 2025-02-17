@@ -248,7 +248,7 @@
         <identity.inbound.auth.oauth.import.version.range>[6.7.116, 8.0.0)
         </identity.inbound.auth.oauth.import.version.range>
 
-        <nimbusds.osgi.version.range>[9.0.0,11.0.0)</nimbusds.osgi.version.range>
+        <nimbusds.osgi.version.range>[9.0.0,10.0.0)</nimbusds.osgi.version.range>
         <nimbusds.version>9.37.3.wso2v1</nimbusds.version>
 
         <org.apache.commons.lang.imp.pkg.version.range>[2.6,3)</org.apache.commons.lang.imp.pkg.version.range>
