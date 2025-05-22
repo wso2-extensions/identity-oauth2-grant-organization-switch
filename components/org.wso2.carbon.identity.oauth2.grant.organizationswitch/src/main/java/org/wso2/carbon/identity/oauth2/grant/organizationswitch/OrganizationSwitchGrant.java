@@ -30,8 +30,10 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -145,6 +147,10 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
         if (OAuthConstants.UserType.APPLICATION.equals(tokenDO.getTokenType())) {
             allowedScopes = (String[]) ArrayUtils.removeElement(allowedScopes, OAuthConstants.Scope.OPENID);
+            if (IdentityUtil.threadLocalProperties.get().get("root_token_grant_type") != null) {
+                IdentityUtil.threadLocalProperties.get().remove("root_token_grant_type");
+            }
+            IdentityUtil.threadLocalProperties.get().put("root_token_grant_type", tokenDO.getGrantType());
         }
         tokReqMsgCtx.setScope(allowedScopes);
         if (tokenDO.getTokenBinding() != null) {
@@ -162,7 +168,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     @Override
     public boolean issueRefreshToken(String tokenType) throws IdentityOAuth2Exception {
 
-        return super.issueRefreshToken() && OAuthConstants.UserType.APPLICATION_USER.equals(tokenType);
+        return (super.issueRefreshToken() && OAuthConstants.UserType.APPLICATION_USER.equals(tokenType)) ||
+                (issueRefreshTokenAllowedForApplication() && OAuthConstants.UserType.APPLICATION.equals(tokenType));
+    }
+
+    private boolean issueRefreshTokenAllowedForApplication() {
+
+        String rootTokenGrantType = (String) IdentityUtil.threadLocalProperties.get().get("root_token_grant_type");
+        return rootTokenGrantType != null && OAuthServerConfiguration.getInstance().
+                getValueForIsRefreshTokenAllowed(rootTokenGrantType);
     }
 
     @Override
