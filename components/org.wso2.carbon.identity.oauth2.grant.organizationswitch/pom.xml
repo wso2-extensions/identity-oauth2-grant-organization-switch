@@ -168,6 +168,7 @@
                             org.wso2.carbon.identity.application.common.model; version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.core.util; version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.oauth.dao; version="${identity.inbound.auth.oauth.import.version.range}",
+                            org.wso2.carbon.identity.oauth.config; version="${identity.inbound.auth.oauth.import.version.range}",
                             org.wso2.carbon.identity.oauth2; version="${identity.inbound.auth.oauth.import.version.range}",
                             org.wso2.carbon.identity.oauth2.dto; version="${identity.inbound.auth.oauth.import.version.range}",
                             org.wso2.carbon.identity.oauth2.model; version="${identity.inbound.auth.oauth.import.version.range}",

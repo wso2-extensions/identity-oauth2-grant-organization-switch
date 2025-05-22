@@ -30,8 +30,10 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -79,6 +81,7 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
     private static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
     private static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
+    private static final String ROOT_TOKEN_GRANT_TYPE = "rootTokenGrantType";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -145,6 +148,10 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         String[] allowedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
         if (OAuthConstants.UserType.APPLICATION.equals(tokenDO.getTokenType())) {
             allowedScopes = (String[]) ArrayUtils.removeElement(allowedScopes, OAuthConstants.Scope.OPENID);
+            if (IdentityUtil.threadLocalProperties.get().get(ROOT_TOKEN_GRANT_TYPE) != null) {
+                IdentityUtil.threadLocalProperties.get().remove(ROOT_TOKEN_GRANT_TYPE);
+            }
+            IdentityUtil.threadLocalProperties.get().put(ROOT_TOKEN_GRANT_TYPE, tokenDO.getGrantType());
         }
         tokReqMsgCtx.setScope(allowedScopes);
         if (tokenDO.getTokenBinding() != null) {
@@ -162,7 +169,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     @Override
     public boolean issueRefreshToken(String tokenType) throws IdentityOAuth2Exception {
 
-        return super.issueRefreshToken() && OAuthConstants.UserType.APPLICATION_USER.equals(tokenType);
+        return (super.issueRefreshToken() && OAuthConstants.UserType.APPLICATION_USER.equals(tokenType)) ||
+                (issueRefreshTokenAllowedForApplication() && OAuthConstants.UserType.APPLICATION.equals(tokenType));
+    }
+
+    private boolean issueRefreshTokenAllowedForApplication() {
+
+        String rootTokenGrantType = (String) IdentityUtil.threadLocalProperties.get().get(ROOT_TOKEN_GRANT_TYPE);
+        return rootTokenGrantType != null && OAuthServerConfiguration.getInstance().
+                getValueForIsRefreshTokenAllowed(rootTokenGrantType);
     }
 
     @Override
@@ -224,10 +239,14 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        if (tokReqMsgCtx.getProperty(TOKEN_BINDING_REFERENCE) != null) {
-            tokReqMsgCtx.setTokenBinding((TokenBinding) tokReqMsgCtx.getProperty(TOKEN_BINDING_REFERENCE));
+        try {
+            if (tokReqMsgCtx.getProperty(TOKEN_BINDING_REFERENCE) != null) {
+                tokReqMsgCtx.setTokenBinding((TokenBinding) tokReqMsgCtx.getProperty(TOKEN_BINDING_REFERENCE));
+            }
+            return super.issue(tokReqMsgCtx);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(ROOT_TOKEN_GRANT_TYPE);
         }
-        return super.issue(tokReqMsgCtx);
     }
 
     private String extractParameter(String param, OAuthTokenReqMessageContext tokReqMsgCtx) {
