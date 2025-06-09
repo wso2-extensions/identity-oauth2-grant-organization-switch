@@ -199,10 +199,9 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private void isAncestorOrg(String currentOrgId, String parentOrgId) throws IdentityOAuth2ClientException,
             OrganizationManagementServerException {
 
-        if (getOrganizationManager()
-                .isAncestorOrg(currentOrgId, parentOrgId)) {
-            throw new IdentityOAuth2ClientException("During impersonation organization switch should not be allowed " +
-                    "for a parent org.");
+        if (getOrganizationManager().isAncestorOrg(currentOrgId, parentOrgId)) {
+            throw new IdentityOAuth2ClientException("Switching the token to ancestor organizations is not allowed " +
+                    "with an impersonated token.");
         }
     }
 
