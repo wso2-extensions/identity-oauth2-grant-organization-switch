@@ -30,17 +30,15 @@ import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -58,7 +56,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -69,7 +66,6 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 
@@ -236,6 +232,34 @@ public class OrganizationSwitchGrantTest {
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(SWITCHING_ORG_TENANT_DOMAIN);
         when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn(SWITCHING_ORG_ID);
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
+    }
+
+    @DataProvider
+    public Object[][] dataProviderSwitchAncestorOrgDuringImpersonation() {
+
+        return new Object[][]{
+                { true, false },
+                { false, true },
+        };
+    }
+
+    @Test(dataProvider = "dataProviderSwitchAncestorOrgDuringImpersonation")
+    public void testSwitchAncestorOrgDuringImpersonation(boolean isAncestorOrg, boolean isValid)
+            throws IdentityOAuth2Exception, OrganizationManagementException, NoSuchAlgorithmException, JOSEException {
+
+        when(mockOAuth2TokenValidationResponseDTO.isValid()).thenReturn(true);
+        when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
+        when(mockAuthenticatedUser.getTenantDomain()).thenReturn(SWITCHING_ORG_TENANT_DOMAIN);
+        when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn(SWITCHING_ORG_ID);
+        when(mockOrganizationManager.isAncestorOrg(anyString(), anyString())).thenReturn(isAncestorOrg);
+        oAuthTokenReqMessageContext.setImpersonationRequest(true);
+
+        if (!isValid) {
+            Assert.assertThrows(IdentityOAuth2ClientException.class,
+                    () -> organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext));
+        } else {
+            Assert.assertTrue(organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext));
+        }
     }
 
     @Test(expectedExceptions = IdentityOAuth2ClientException.class)

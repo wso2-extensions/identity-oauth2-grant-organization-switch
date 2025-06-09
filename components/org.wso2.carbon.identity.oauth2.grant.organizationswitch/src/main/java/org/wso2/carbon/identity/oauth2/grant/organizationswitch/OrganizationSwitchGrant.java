@@ -117,6 +117,10 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             if (isInSameBranch(appResideOrgId, accessingOrgId)) {
                 isAppShared(appName, authorizedUser.getTenantDomain(), appResideOrgId, accessingOrgId);
             }
+            // Check whether the organization is allowed to switch for impersonation requests.
+            if (tokReqMsgCtx.isImpersonationRequest()) {
+                isAncestorOrg(appResideOrgId, accessingOrgId);
+            }
         } catch (OrganizationManagementException e) {
             throw new IdentityOAuth2ServerException("Error while checking organizations allowed to switch.", e);
         }
@@ -189,6 +193,15 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
             throw new IdentityOAuth2Exception("Error while checking organization exist with ID: " + organizationId , e);
         } catch (UserStoreException e) {
             throw new IdentityOAuth2Exception("Error while validating whether the organization is active.", e);
+        }
+    }
+
+    private void isAncestorOrg(String currentOrgId, String parentOrgId) throws IdentityOAuth2ClientException,
+            OrganizationManagementServerException {
+
+        if (getOrganizationManager().isAncestorOrg(currentOrgId, parentOrgId)) {
+            throw new IdentityOAuth2ClientException("Switching the token to ancestor organizations is not allowed " +
+                    "with an impersonated token.");
         }
     }
 
