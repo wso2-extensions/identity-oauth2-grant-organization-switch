@@ -51,6 +51,11 @@
                 <version>${identity.inbound.auth.oauth.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.oauth.common</artifactId>
+                <version>${identity.inbound.auth.oauth.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon</groupId>
                 <artifactId>org.wso2.carbon.user.core</artifactId>
                 <version>${carbon.kernel.version}</version>
@@ -128,6 +133,12 @@
                 <artifactId>org.jacoco.agent</artifactId>
                 <classifier>runtime</classifier>
                 <version>${jacoco.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.oauth.rar</artifactId>
+                <version>${identity.inbound.auth.oauth.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -244,7 +255,7 @@
         <carbon.identity.framework.version>5.25.390</carbon.identity.framework.version>
         <carbon.identity.package.import.version.range>[5.20.0, 8.0.0)
         </carbon.identity.package.import.version.range>
-        <identity.inbound.auth.oauth.version>7.0.97</identity.inbound.auth.oauth.version>
+        <identity.inbound.auth.oauth.version>7.0.358</identity.inbound.auth.oauth.version>
         <identity.inbound.auth.oauth.import.version.range>[6.7.116, 8.0.0)
         </identity.inbound.auth.oauth.import.version.range>
 

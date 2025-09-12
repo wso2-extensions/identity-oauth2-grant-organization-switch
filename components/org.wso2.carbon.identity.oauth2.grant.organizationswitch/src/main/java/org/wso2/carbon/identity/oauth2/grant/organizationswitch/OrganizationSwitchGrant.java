@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -60,6 +61,7 @@ import org.wso2.carbon.user.core.tenant.TenantManager;
 import java.util.Arrays;
 import java.util.Map;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.ORGANIZATION_SWITCH;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ACT;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.IMPERSONATED_SUBJECT;
@@ -162,7 +164,12 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     @Override
     public boolean issueRefreshToken(String tokenType) throws IdentityOAuth2Exception {
 
-        return super.issueRefreshToken() && OAuthConstants.UserType.APPLICATION_USER.equals(tokenType);
+        String issueRefreshTokenAllowedProp = OAuthServerConfiguration.getInstance().
+                getValueForIsRefreshTokenAllowed(ORGANIZATION_SWITCH, null);
+        if (StringUtils.isBlank(issueRefreshTokenAllowedProp)) {
+            return super.issueRefreshToken() && OAuthConstants.UserType.APPLICATION_USER.equals(tokenType);
+        }
+        return Boolean.parseBoolean(issueRefreshTokenAllowedProp);
     }
 
     @Override
