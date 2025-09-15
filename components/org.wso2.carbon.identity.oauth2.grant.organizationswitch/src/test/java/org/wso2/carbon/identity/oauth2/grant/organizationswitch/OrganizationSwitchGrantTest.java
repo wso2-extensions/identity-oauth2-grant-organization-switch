@@ -28,8 +28,10 @@ import com.nimbusds.jwt.SignedJWT;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -41,6 +43,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -116,6 +119,7 @@ public class OrganizationSwitchGrantTest {
     private MockedStatic<OAuth2Util> mockedOAuth2Util;
     private MockedStatic<Utils> mockOrgUtil;
     private MockedStatic<IdentityTenantUtil> mockIdentityTenantUtil;
+    private MockedStatic<OAuthServerConfiguration> mockOAuthServerConfig;
 
     @BeforeClass
     public void setup() throws Exception {
@@ -173,11 +177,38 @@ public class OrganizationSwitchGrantTest {
         oAuthTokenReqMessageContext = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
         oAuthTokenReqMessageContext.addProperty("OAuthAppDO", mockOAuthAppDO);
         organizationSwitchGrant = new OrganizationSwitchGrant();
+        mockOAuthServerConfig = Mockito.mockStatic(OAuthServerConfiguration.class);
         RequestParameter[] requestParameters = new RequestParameter[2];
         requestParameters[0] = new RequestParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, SWITCHING_ORG_ID);
         requestParameters[1] = new RequestParameter(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM, ACCESS_TOKEN);
         when(oAuth2AccessTokenReqDTO.getRequestParameters()).thenReturn(requestParameters);
         CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = false;
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        if (mockOAuthServerConfig != null) {
+            mockOAuthServerConfig.close();
+        }
+    }
+
+    @DataProvider
+    public Object[][] provideTokenTypes() {
+
+        return new Object[][]{
+                {OAuthConstants.UserType.APPLICATION_USER, true},
+                {OAuthConstants.UserType.APPLICATION, false}
+        };
+    }
+
+    @DataProvider
+    public Object[][] provideRefreshTokenAllowedPropertyValues() {
+
+        return new Object[][]{
+                {true},
+                {false}
+        };
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
@@ -312,6 +343,28 @@ public class OrganizationSwitchGrantTest {
         Assert.assertTrue(organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext));
         Assert.assertNotNull(oAuthTokenReqMessageContext.getProperty(IMPERSONATING_ACTOR), IMPERSONATOR_ID);
         Assert.assertNotNull(oAuthTokenReqMessageContext.getProperty(IMPERSONATED_SUBJECT), IMPERSONATED_SUBJECT_ID);
+    }
+
+    @Test(dataProvider = "provideTokenTypes")
+    void testIssueRefreshTokenWithBlankPropertyInConfigs(String tokenType, boolean expectedValue) throws Exception {
+
+        OAuthServerConfiguration config = mock(OAuthServerConfiguration.class);
+        mockOAuthServerConfig.when(OAuthServerConfiguration::getInstance).thenReturn(config);
+        when(config.getValueForIsRefreshTokenAllowed(anyString(), any())).thenReturn("");
+
+        boolean result = organizationSwitchGrant.issueRefreshToken(tokenType);
+        Assert.assertEquals(result, expectedValue);
+    }
+
+    @Test(dataProvider = "provideRefreshTokenAllowedPropertyValues")
+    void testIssueRefreshTokenWithPropertyInConfigs(boolean propertyValue) throws Exception {
+
+        OAuthServerConfiguration config = mock(OAuthServerConfiguration.class);
+        mockOAuthServerConfig.when(OAuthServerConfiguration::getInstance).thenReturn(config);
+        when(config.getValueForIsRefreshTokenAllowed(anyString(), any())).thenReturn(String.valueOf(propertyValue));
+
+        boolean result = organizationSwitchGrant.issueRefreshToken("any");
+        Assert.assertEquals(result, propertyValue);
     }
 
     private SignedJWT getImpersonatedAccessToken() throws NoSuchAlgorithmException, JOSEException {
