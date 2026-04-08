@@ -92,6 +92,7 @@ public class OrganizationSwitchGrantTest {
 
     private static final String TOKEN_ISSUED_ORG_ID = "90184a8d-113f-5211-a0d5-efe36b082233";
     private static final String TOKEN_ISSUED_TENANT_DOMAIN = "EasyMeet";
+    private static final String APP_RESIDENT_TENANT_DOMAIN = "AppResidentTenant";
     private static final  String SWITCHING_ORG_ID = "70184a8d-113f-5211-ac0d5-efe39b082214";
     private static final String SWITCHING_ORG_TENANT_DOMAIN = "Medverse";
     private static final String MOCK_TOKEN_BINDING_REFERENCE = "mockTokenBindingReference";
@@ -131,6 +132,8 @@ public class OrganizationSwitchGrantTest {
         mockIdentityTenantUtil = Mockito.mockStatic(IdentityTenantUtil.class);
         mockedOAuth2Util.when(() -> OAuth2Util.findAccessToken(nullable(String.class), anyBoolean()))
                 .thenReturn(mockAccessTokenDO);
+        mockedOAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class)))
+                .thenReturn(APP_RESIDENT_TENANT_DOMAIN);
         mockOrgUtil.when(Utils::getSubOrgStartLevel).thenReturn(2);
         mockIdentityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(nullable(String.class))).thenReturn(1);
 
@@ -171,7 +174,7 @@ public class OrganizationSwitchGrantTest {
     }
 
     @BeforeMethod
-    public void init() {
+    public void init() throws OrganizationManagementException {
 
         oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
         oAuthTokenReqMessageContext = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
@@ -182,6 +185,7 @@ public class OrganizationSwitchGrantTest {
         requestParameters[0] = new RequestParameter(OrganizationSwitchGrantConstants.Params.ORG_PARAM, SWITCHING_ORG_ID);
         requestParameters[1] = new RequestParameter(OrganizationSwitchGrantConstants.Params.TOKEN_PARAM, ACCESS_TOKEN);
         when(oAuth2AccessTokenReqDTO.getRequestParameters()).thenReturn(requestParameters);
+        when(mockOrganizationManager.resolveOrganizationId(APP_RESIDENT_TENANT_DOMAIN)).thenReturn(TOKEN_ISSUED_ORG_ID);
         CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = false;
     }
 
@@ -265,7 +269,7 @@ public class OrganizationSwitchGrantTest {
         when(mockOAuth2TokenValidationResponseDTO.isValid()).thenReturn(true);
         when(mockAccessTokenDO.getAuthzUser()).thenReturn(mockAuthenticatedUser);
         when(mockAuthenticatedUser.getTenantDomain()).thenReturn(SWITCHING_ORG_TENANT_DOMAIN);
-        when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn(SWITCHING_ORG_ID);
+        when(mockOrganizationManager.resolveOrganizationId(APP_RESIDENT_TENANT_DOMAIN)).thenReturn(SWITCHING_ORG_ID);
         organizationSwitchGrant.validateGrant(oAuthTokenReqMessageContext);
     }
 

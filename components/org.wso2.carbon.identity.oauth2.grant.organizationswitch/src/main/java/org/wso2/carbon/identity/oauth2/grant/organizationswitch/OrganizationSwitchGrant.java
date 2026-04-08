@@ -111,13 +111,14 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
                 AuthenticatedUser.createLocalAuthenticatedUserFromSubjectIdentifier(
                         validationResponseDTO.getAuthorizedUser());
 
-        String appResideOrgId = getOrganizationIdFromTenantDomain(authorizedUser.getTenantDomain());
         OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP_PROPERTY);
+        String appResidentTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+        String appResideOrgId = getOrganizationIdFromTenantDomain(appResidentTenantDomain);
         String appName = oAuthAppDO.getApplicationName();
         try {
             // Check whether the organization is allowed to switch.
             if (isInSameBranch(appResideOrgId, accessingOrgId)) {
-                isAppShared(appName, authorizedUser.getTenantDomain(), appResideOrgId, accessingOrgId);
+                isAppShared(appName, appResidentTenantDomain, appResideOrgId, accessingOrgId);
             }
         } catch (OrganizationManagementException e) {
             throw new IdentityOAuth2ServerException("Error while checking organizations allowed to switch.", e);
