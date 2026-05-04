@@ -197,7 +197,8 @@
                             org.wso2.carbon.user.core.common;version="${carbon.kernel.package.import.version.range}",
                             org.wso2.carbon;version="${carbon.kernel.package.import.version.range}",
                             com.nimbusds.jose.*; version="${nimbusds.osgi.version.range}",
-                            com.nimbusds.jwt; version="${nimbusds.osgi.version.range}"
+                            com.nimbusds.jwt; version="${nimbusds.osgi.version.range}",
+                            org.wso2.carbon.identity.event.*; version="${carbon.identity.package.import.version.range}"
                         </Import-Package>
                     </instructions>
                 </configuration>

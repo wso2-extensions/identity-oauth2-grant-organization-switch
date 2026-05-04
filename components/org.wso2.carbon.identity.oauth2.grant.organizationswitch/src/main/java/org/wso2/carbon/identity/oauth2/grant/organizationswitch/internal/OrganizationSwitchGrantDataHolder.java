@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.grant.organizationswitch.internal;
 
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
@@ -38,6 +39,7 @@ public class OrganizationSwitchGrantDataHolder {
     private OrgApplicationManager orgApplicationManager;
     private ApplicationManagementService applicationManagementService;
     private RealmService realmService;
+    private IdentityEventService identityEventService;
 
     public static OrganizationSwitchGrantDataHolder getInstance() {
 
@@ -153,5 +155,15 @@ public class OrganizationSwitchGrantDataHolder {
     public void setRealmService(RealmService realmService) {
 
         this.realmService = realmService;
+    }
+
+    public IdentityEventService getIdentityEventService() {
+
+        return identityEventService;
+    }
+
+    public void setIdentityEventService(IdentityEventService identityEventService) {
+
+        this.identityEventService = identityEventService;
     }
 }
