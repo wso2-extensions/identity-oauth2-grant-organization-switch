@@ -25,6 +25,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.organization.management.application.OrgApplicationManager;
 import org.wso2.carbon.identity.organization.management.application.internal.OrgApplicationMgtDataHolder;
@@ -182,5 +183,22 @@ public class OrganizationSwitchGrantServiceComponent {
 
         OrganizationSwitchGrantDataHolder.getInstance().setRealmService(null);
         LOG.debug("Realm service unset in OrganizationSwitchGrantDataHolder.");
+    }
+
+    @Reference(
+            name = "identity.event.service",
+            service = IdentityEventService.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityEventService"
+    )
+    protected void setIdentityEventService(IdentityEventService identityEventService) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setIdentityEventService(identityEventService);
+    }
+
+    protected void unsetIdentityEventService(IdentityEventService identityEventService) {
+
+        OrganizationSwitchGrantDataHolder.getInstance().setIdentityEventService(null);
     }
 }

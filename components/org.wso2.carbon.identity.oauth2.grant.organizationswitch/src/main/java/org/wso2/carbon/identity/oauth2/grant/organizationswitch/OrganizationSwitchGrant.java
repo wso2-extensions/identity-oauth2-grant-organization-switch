@@ -30,6 +30,8 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -59,8 +61,10 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
+import static org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty.ERROR_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.ORGANIZATION_SWITCH;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ACT;
@@ -81,6 +85,8 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
     private static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
     private static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
+    public static final String OAUTH_TOKEN_REQ_MESSAGE_CONTEXT = "OAUTH_TOKEN_REQ_MESSAGE_CONTEXT";
+    public static final String POST_ORGANIZATION_SWITCH_EVENT = "POST_ORGANIZATION_SWITCH_EVENT";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -234,7 +240,23 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         if (tokReqMsgCtx.getProperty(TOKEN_BINDING_REFERENCE) != null) {
             tokReqMsgCtx.setTokenBinding((TokenBinding) tokReqMsgCtx.getProperty(TOKEN_BINDING_REFERENCE));
         }
-        return super.issue(tokReqMsgCtx);
+        OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = super.issue(tokReqMsgCtx);
+        publishOrgSwitchEvent(tokReqMsgCtx, oAuth2AccessTokenRespDTO.getErrorCode());
+        return oAuth2AccessTokenRespDTO;
+    }
+
+    public static void publishOrgSwitchEvent(OAuthTokenReqMessageContext context, String errorCode) {
+
+        HashMap<String, Object> properties = new HashMap<>();
+        properties.put(OAUTH_TOKEN_REQ_MESSAGE_CONTEXT, context);
+        properties.put(ERROR_CODE, errorCode);
+
+        Event event = new Event(POST_ORGANIZATION_SWITCH_EVENT, properties);
+        try {
+            OrganizationSwitchGrantDataHolder.getInstance().getIdentityEventService().handleEvent(event);
+        } catch (IdentityEventException e) {
+            LOG.error("Error while publishing events for organization switch", e);
+        }
     }
 
     private String extractParameter(String param, OAuthTokenReqMessageContext tokReqMsgCtx) {
