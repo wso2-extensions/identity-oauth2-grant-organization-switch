@@ -64,11 +64,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty.ERROR_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.ORGANIZATION_SWITCH;
 
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ACT;
+import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ERROR_CODE;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.IMPERSONATED_SUBJECT;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.OAUTH_TOKEN_REQ_MESSAGE_CONTEXT;
