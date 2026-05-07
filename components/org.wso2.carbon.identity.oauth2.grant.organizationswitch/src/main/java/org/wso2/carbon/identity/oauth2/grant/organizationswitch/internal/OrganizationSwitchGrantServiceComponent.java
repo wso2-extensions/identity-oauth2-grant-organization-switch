@@ -188,7 +188,7 @@ public class OrganizationSwitchGrantServiceComponent {
     @Reference(
             name = "identity.event.service",
             service = IdentityEventService.class,
-            cardinality = ReferenceCardinality.MULTIPLE,
+            cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetIdentityEventService"
     )

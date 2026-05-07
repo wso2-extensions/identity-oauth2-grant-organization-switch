@@ -32,6 +32,8 @@ public class OrganizationSwitchGrantConstants {
     public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
     public static final String ACT = "act";
     public static final String SUB = "sub";
+    public static final String OAUTH_TOKEN_REQ_MESSAGE_CONTEXT = "OAUTH_TOKEN_REQ_MESSAGE_CONTEXT";
+    public static final String POST_ORGANIZATION_SWITCH_EVENT = "POST_ORGANIZATION_SWITCH_EVENT";
 
     /**
      * Constants related to request parameters.
