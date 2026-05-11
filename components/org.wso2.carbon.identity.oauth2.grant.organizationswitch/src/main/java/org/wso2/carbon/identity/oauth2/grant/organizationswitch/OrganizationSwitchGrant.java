@@ -25,11 +25,14 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -59,9 +62,11 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.ORGANIZATION_SWITCH;
+
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_TENANT_DOMAIN_FROM_ORGANIZATION_DOMAIN;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.ACT;
 import static org.wso2.carbon.identity.oauth2.grant.organizationswitch.util.OrganizationSwitchGrantConstants.IMPERSONATED_SUBJECT;
@@ -81,6 +86,12 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
     private static final Log LOG = LogFactory.getLog(OrganizationSwitchGrant.class);
     private static final String TOKEN_BINDING_REFERENCE = "tokenBindingReference";
     private static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
+    private static final String EVENT_PROP_AUTHENTICATED_USER = "AUTHENTICATED_USER";
+    private static final String EVENT_PROP_APPLICATION_NAME = "APPLICATION_NAME";
+    private static final String EVENT_PROP_APPLICATION_TENANT_DOMAIN = "APPLICATION_TENANT_DOMAIN";
+    private static final String EVENT_PROP_TENANT_DOMAIN = "TENANT_DOMAIN";
+    private static final String POST_ORGANIZATION_SWITCH_EVENT = "POST_ORGANIZATION_SWITCH_EVENT";
+    private static final String ERROR_CODE = "ERROR_CODE";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -235,7 +246,37 @@ public class OrganizationSwitchGrant extends AbstractAuthorizationGrantHandler {
         if (tokReqMsgCtx.getProperty(TOKEN_BINDING_REFERENCE) != null) {
             tokReqMsgCtx.setTokenBinding((TokenBinding) tokReqMsgCtx.getProperty(TOKEN_BINDING_REFERENCE));
         }
-        return super.issue(tokReqMsgCtx);
+        OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = super.issue(tokReqMsgCtx);
+        publishOrgSwitchEvent(tokReqMsgCtx, oAuth2AccessTokenRespDTO.getErrorCode());
+        return oAuth2AccessTokenRespDTO;
+    }
+
+    public static void publishOrgSwitchEvent(OAuthTokenReqMessageContext context, String errorCode) {
+
+        Event event = buildEvent(context, errorCode);
+        try {
+            OrganizationSwitchGrantDataHolder.getInstance().getIdentityEventService().handleEvent(event);
+        } catch (IdentityEventException e) {
+            LOG.error("Error while publishing events for organization switch", e);
+        }
+    }
+
+    private static Event buildEvent(OAuthTokenReqMessageContext context, String errorCode) {
+
+        HashMap<String, Object> properties = new HashMap<>();
+        properties.put(EVENT_PROP_AUTHENTICATED_USER, context.getAuthorizedUser());
+        OAuthAppDO oAuthAppDO = (OAuthAppDO) context.getProperty(OAUTH_APP_PROPERTY);
+        if (oAuthAppDO != null) {
+            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(
+                    (OAuthAppDO) context.getProperty(OAUTH_APP_PROPERTY));
+            properties.put(EVENT_PROP_APPLICATION_TENANT_DOMAIN, appTenantDomain);
+            properties.put(EVENT_PROP_APPLICATION_NAME, oAuthAppDO.getApplicationName());
+
+        }
+        properties.put(EVENT_PROP_TENANT_DOMAIN,
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        properties.put(ERROR_CODE, errorCode);
+        return new Event(POST_ORGANIZATION_SWITCH_EVENT, properties);
     }
 
     private String extractParameter(String param, OAuthTokenReqMessageContext tokReqMsgCtx) {
